@@ -43,7 +43,7 @@ export function buildTack(a: Anatomy, rc: AnimalRecipe, h: number): TackOut {
   const L = rc.body.length * s;
   const CW = rc.body.chestWidth * s;
   const RW = rc.body.rumpWidth * s;
-  const ht = Math.max(h * 0.6, D * 0.012);
+  const ht = Math.max(h * 0.85, D * 0.012);
   const body = a.prims.filter((p) => p.region !== 'wing' && p.region !== 'spine');
   const bw = (n: string) => a.bones[a.index[n]].world;
   const sad = a.dims.saddle;
@@ -131,18 +131,25 @@ export function buildTack(a: Anatomy, rc: AnimalRecipe, h: number): TackOut {
         const head = a.index.Head;
         const chest = a.index.Chest;
         const neck = a.index.Neck2;
-        pieces.push({
-          name: `Rein_${sx > 0 ? 'L' : 'R'}`, material: 'tack', color: leather,
-          field: (p) => sdCapsule(p, bit, hand, r),
-          min: [Math.min(bit[0], hand[0]) - r * 3, Math.min(bit[1], hand[1]) - r * 3, Math.min(bit[2], hand[2]) - r * 3],
-          max: [Math.max(bit[0], hand[0]) + r * 3, Math.max(bit[1], hand[1]) + r * 3, Math.max(bit[2], hand[2]) + r * 3],
-          tris: 50,
-          weights: (p) => {
-            const t = Math.max(0, Math.min(1, dot(sub(p, bit), sub(hand, bit)) / dot(sub(hand, bit), sub(hand, bit))));
-            if (t < 0.5) return [[head, 1 - t * 2], [neck, t * 2]];
-            return [[neck, 2 - t * 2], [chest, t * 2 - 1]];
-          },
-        });
+        // drape over the crest: bit → above the neck → saddle front
+        const crest = add(lerp3(bw('Neck2'), bw('Neck1'), 0.4), [sx * thin * 2, rc.neck.thickness * s * 1.7, 0]);
+        const lo = (p: V3, q: V3) => [Math.min(p[0], q[0]) - r * 3, Math.min(p[1], q[1]) - r * 3, Math.min(p[2], q[2]) - r * 3] as V3;
+        const hi = (p: V3, q: V3) => [Math.max(p[0], q[0]) + r * 3, Math.max(p[1], q[1]) + r * 3, Math.max(p[2], q[2]) + r * 3] as V3;
+        const segs: [V3, V3, [number, number][], [number, number][]][] = [
+          [bit, crest, [[head, 1]], [[neck, 1]]],
+          [crest, hand, [[neck, 1]], [[chest, 1]]],
+        ];
+        segs.forEach(([p0, p1, w0, w1], k) =>
+          pieces.push({
+            name: `Rein_${sx > 0 ? 'L' : 'R'}${k}`, material: 'tack', color: leather,
+            field: (p) => sdCapsule(p, p0, p1, r),
+            min: lo(p0, p1), max: hi(p0, p1), tris: 40,
+            weights: (p) => {
+              const t = Math.max(0, Math.min(1, dot(sub(p, p0), sub(p1, p0)) / dot(sub(p1, p0), sub(p1, p0))));
+              return [[w0[0][0], 1 - t], [w1[0][0], t]];
+            },
+          }),
+        );
       }
     }
   }
@@ -163,7 +170,8 @@ export function buildTack(a: Anatomy, rc: AnimalRecipe, h: number): TackOut {
     const nAxis = norm(sub(nh, n1));
     const nUp = norm(sub([0, 1, 0], scale(nAxis, dot([0, 1, 0], nAxis))));
     const nr = Math.max(rc.neck.thickness * s * 2.2, D * 0.5);
-    shell('Crinet', (p) => smax(sdCapsule(p, add(n1, scale(nAxis, nr * 0.3)), sub(nh, scale(nAxis, rc.head.size * s * 0.2)), nr), -dot(sub(p, n1), nUp) + nr * 0.1, ht), box(lerp3(n1, nh, 0.5), [nr * 1.2, Math.abs(nh[1] - n1[1]) / 2 + nr * 1.2, Math.abs(nh[2] - n1[2]) / 2 + nr * 1.2]), 300);
+    // (no crinet on animals without much neck: on an elephant it becomes a hood)
+    if (rc.neck.length > rc.head.size * 1.2) shell('Crinet', (p) => smax(sdCapsule(p, add(n1, scale(nAxis, nr * 0.3)), sub(nh, scale(nAxis, rc.head.size * s * 0.2)), nr), -dot(sub(p, n1), nUp) + nr * 0.1, ht), box(lerp3(n1, nh, 0.5), [nr * 1.2, Math.abs(nh[1] - n1[1]) / 2 + nr * 1.2, Math.abs(nh[2] - n1[2]) / 2 + nr * 1.2]), 300);
     // peytral: the chest
     const ua = lerp3(bw('UpperArm_L'), bw('UpperArm_R'), 0.5);
     const pc: V3 = add(ua, [0, D * 0.05, D * 0.12]);
@@ -194,7 +202,7 @@ export function buildTack(a: Anatomy, rc: AnimalRecipe, h: number): TackOut {
     // keep each grid modest
     let hh = ht;
     const ext = sub(pc.max, pc.min);
-    while ((ext[0] / hh) * (ext[1] / hh) * (ext[2] / hh) > 1.2e6) hh *= 1.25;
+    while ((ext[0] / hh) * (ext[1] / hh) * (ext[2] / hh) > 2.5e5) hh *= 1.15;
     const g = sampleFn(pc.field, pc.min, pc.max, hh);
     const m = surfaceNets(g);
     if (m.tri.length < 12) continue;

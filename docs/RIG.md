@@ -7,7 +7,7 @@
 - One skinned mesh, two primitives: `Coat` (per-facet `COLOR_0`, roughness 0.88) and `Eyes`
   (roughness 0.12). Up to 4 influences per vertex.
 
-## Bones (33)
+## Bones (33 core)
 
 ```
 Root
@@ -17,6 +17,13 @@ Root
    │                     └─ Scapula_{L,R} ─ UpperArm ─ Forearm ─ FrontFoot ─ FrontToe
    ├─ Tail1 ─ Tail2 ─ Tail3 ─ Tail4 ─ Tail5
    └─ Thigh_{L,R} ─ Shin ─ HindFoot ─ HindToe
+```
+
+Optional bones, present only when the recipe has the feature:
+
+```
+Head ─ Trunk1 ─ Trunk2 ─ Trunk3                 (trunk > 0)
+Chest ─ WingArm_{L,R} ─ WingFore ─ WingHand     (wings ≠ none; rest pose = spread)
 ```
 
 (`_L` / `_R` suffix on every leg bone, e.g. `Forearm_L`.) The set is fixed for every species,
@@ -36,8 +43,23 @@ covers. Move the root at that speed to avoid foot sliding.
 | Trot | diagonal pairs, duty 0.42 |
 | Gallop | rotary, duty 0.3, spine flexion |
 | Eat | head to the ground and nibble |
+| Fly | winged animals only: wing beat, legs tucked, tail streaming (`speed` = suggested airspeed) |
 
 Cycle periods scale with √(leg length) (dynamic similarity), so a cat steps faster than a horse.
+
+## Sockets
+
+Plain child nodes (not skin joints), tagged `extras.badzoo.socket`:
+
+| Socket | Parent | Use |
+|---|---|---|
+| `Socket_Saddle` | Spine2 | rider's hips (on the saddle seat when there is one, else the bare back) |
+| `Socket_Head` | Head | muzzle / beak / trunk tip: bits, held items, breath effects |
+
+## Materials
+
+`Coat` (vertex colours), `Eyes` (glossy; emissive when `eyes.glow`), and when tack is present
+`Tack` (leather / cloth) and `Metal` (plate, stirrups; metallic 0.85).
 
 ## Extras
 

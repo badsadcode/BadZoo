@@ -80,3 +80,5 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
   .panel.left { grid-row: 3; border-right: 0; }
   .viewport { grid-row: 2; }
 }
+.seg.cats { margin-bottom: 10px; background: var(--panel2); }
+.seg.cats button { flex: 1; }

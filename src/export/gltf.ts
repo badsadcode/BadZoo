@@ -78,6 +78,13 @@ class Buf {
 }
 
 const r6 = (x: number) => Math.round(x * 1e6) / 1e6;
+function hexLinear(hex: string): number[] {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [16, 8, 0].map((sh) => {
+    const c = ((n >> sh) & 255) / 255;
+    return r6(c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  });
+}
 
 export interface GltfOptions {
   animations?: boolean;
@@ -96,7 +103,12 @@ export function buildGltf(an: Animal, opts: GltfOptions = {}): { json: any; bin:
     meshes: [],
     materials: [
       { name: 'Coat', pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 0.88 } },
-      { name: 'Eyes', pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 0.12 } },
+      {
+        name: 'Eyes', pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 0.12 },
+        ...(an.recipe.eyes.glow ? { emissiveFactor: hexLinear(an.recipe.eyes.color) } : {}),
+      },
+      { name: 'Tack', pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 0.7 } },
+      { name: 'Metal', pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0.85, roughnessFactor: 0.35 } },
     ],
     skins: [],
   };
@@ -127,7 +139,30 @@ export function buildGltf(an: Animal, opts: GltfOptions = {}): { json: any; bin:
       mode: 4,
     };
   };
-  json.meshes.push({ name: `${name}_mesh`, primitives: [prim(an.body, 0), prim(an.eyes, 1)] });
+  const prims = [prim(an.body, 0), prim(an.eyes, 1)];
+  if (an.tack) prims.push(prim(an.tack, 2));
+  if (an.metal) prims.push(prim(an.metal, 3));
+  json.meshes.push({ name: `${name}_mesh`, primitives: prims });
+  // drop materials nobody uses (validator warns otherwise)
+  const used = new Set(prims.map((p) => p.material));
+  const remap = new Map<number, number>();
+  json.materials = json.materials.filter((_: unknown, i: number) => used.has(i));
+  [...used].sort().forEach((m, i) => remap.set(m, i));
+  for (const p of prims) p.material = remap.get(p.material)!;
+
+  // ── sockets: plain child nodes (not joints). Saddle = where a rider's hips go.
+  const sockets: { name: string; bone: string; at: [number, number, number] }[] = [{ name: 'Socket_Saddle', bone: 'Spine2', at: a.dims.saddle }];
+  if (an.tackPieces.includes('Saddle')) {
+    const s = an.recipe.scale;
+    sockets[0].at = [a.dims.saddle[0], a.dims.saddle[1] + an.recipe.body.chestDepth * s * 0.08, a.dims.saddle[2]];
+  }
+  sockets.push({ name: 'Socket_Head', bone: 'Head', at: a.dims.headTip });
+  for (const sk of sockets) {
+    const bi = a.index[sk.bone];
+    const idx = json.nodes.length;
+    json.nodes.push({ name: sk.name, translation: sub(sk.at, a.bones[bi].world).map(r6), extras: { badzoo: { socket: true } } });
+    (json.nodes[bi].children ??= []).push(idx);
+  }
 
   const ibm: number[] = [];
   for (const b of a.bones) ibm.push(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, r6(-b.world[0]), r6(-b.world[1]), r6(-b.world[2]), 1);
@@ -182,6 +217,8 @@ export function buildGltf(an: Animal, opts: GltfOptions = {}): { json: any; bin:
       up: '+Y',
       forward: '+Z',
       rig: 'quadruped',
+      sockets: ['Socket_Saddle', 'Socket_Head'],
+      tack: an.tackPieces,
       bones: a.bones.map((b) => b.name),
       clips: an.clips.map((c) => ({ name: c.name, duration: r6(c.duration), loop: c.loop, speed: r6(c.speed) })),
       recipe: an.recipe,

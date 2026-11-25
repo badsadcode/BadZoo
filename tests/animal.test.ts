@@ -51,8 +51,8 @@ describe.each(Object.keys(SPECIES))('%s', (sp) => {
   it('stands on the ground, within its triangle budget', () => {
     let minY = Infinity;
     for (let i = 1; i < an.body.positions.length; i += 3) minY = Math.min(minY, an.body.positions[i]);
-    expect(Math.abs(minY)).toBeLessThan(0.02 * an.recipe.scale + 0.01);
-    expect(an.body.indices.length / 3).toBeLessThanOrEqual(FAST.tris * 1.1);
+    expect(Math.abs(minY)).toBeLessThan(an.stats.height * 0.012 + 0.01);
+    expect(an.stats.bodyTris).toBeLessThanOrEqual(FAST.tris * 1.1);
     expect(an.stats.height).toBeGreaterThan(0.1);
   });
 
@@ -82,9 +82,23 @@ describe.each(Object.keys(SPECIES))('%s', (sp) => {
     }
   });
 
+  it('has the features its recipe asks for', () => {
+    const rc = an.recipe;
+    expect(an.clips.some((c) => c.name === 'Fly')).toBe(rc.wings.kind !== 'none');
+    if (rc.wings.kind !== 'none') expect(an.anatomy.index.WingHand_L).toBeDefined();
+    if (rc.head.trunk > 0) expect(an.anatomy.index.Trunk1).toBeDefined();
+    if (rc.tack.saddle) {
+      expect(an.tackPieces).toContain('Saddle');
+      expect(an.tack!.indices.length).toBeGreaterThan(100);
+    }
+    if (rc.tack.barding === 'plate') expect(an.metal!.indices.length).toBeGreaterThan(100);
+  });
+
   it('exports a validator-clean GLB', async () => {
     const glb = exportGlb(an);
     const report = await validator.validateBytes(glb);
+    const json = JSON.parse(new TextDecoder().decode(glb.subarray(20, 20 + new DataView(glb.buffer, glb.byteOffset).getUint32(12, true))));
+    expect(json.nodes.some((n: { name: string }) => n.name === 'Socket_Saddle')).toBe(true);
     if (report.issues.numErrors) console.log(JSON.stringify(report.issues.messages.slice(0, 5), null, 1));
     expect(report.issues.numErrors).toBe(0);
   });

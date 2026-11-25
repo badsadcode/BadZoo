@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { AnimalRecipe } from '../core/recipe';
-import { blendRecipes, presetRecipe, randomRecipe, SPECIES, vary } from '../core/species';
+import { blendRecipes, Category, categoryOf, presetRecipe, randomRecipe, SPECIES, vary } from '../core/species';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -134,7 +134,7 @@ function renderClips(names: string[]) {
   const el = $('clips');
   if (el.dataset.names === names.join()) return;
   el.dataset.names = names.join();
-  const icon: Record<string, string> = { Idle: '🧘', Walk: '🚶', Trot: '🐾', Gallop: '💨', Eat: '🌿' };
+  const icon: Record<string, string> = { Idle: '🧘', Walk: '🚶', Trot: '🐾', Gallop: '💨', Eat: '🌿', Fly: '🪽' };
   el.innerHTML = names.map((n) => `<button data-clip="${n}">${icon[n] ?? '▶'} ${n}</button>`).join('');
   el.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => playClip(b.dataset.clip!)));
 }
@@ -205,8 +205,11 @@ interface Ctl {
   max?: number;
   step?: number;
   options?: string[];
+  /** slider range base when the species has none (e.g. a dog's trunk) */
+  fallback?: (rc: AnimalRecipe) => number;
 }
-const L = (path: string, label: string): Ctl => ({ path, label, kind: 'len' });
+const L = (path: string, label: string, fallback?: (rc: AnimalRecipe) => number): Ctl => ({ path, label, kind: 'len', fallback });
+const B = (path: string, label: string): Ctl => ({ path, label, kind: 'bool' });
 const N = (path: string, label: string, min: number, max: number, step = 0.01): Ctl => ({ path, label, kind: 'num', min, max, step });
 const A = (path: string, label: string, min: number, max: number): Ctl => ({ path, label, kind: 'deg', min, max, step: 1 });
 const C = (path: string, label: string): Ctl => ({ path, label, kind: 'color' });
@@ -217,25 +220,30 @@ const SECTIONS: { title: string; open?: boolean; ctls: Ctl[] }[] = [
   {
     title: 'Body', open: true,
     ctls: [N('scale', 'Scale', 0.25, 3), L('body.length', 'Length'), L('body.chestDepth', 'Chest depth'), L('body.chestWidth', 'Chest width'), L('body.rumpWidth', 'Rump width'),
-      N('body.waist', 'Waist', 0.4, 1.25), N('body.belly', 'Belly', 0, 1), N('body.shoulders', 'Shoulders', 0.5, 1.8), N('body.haunch', 'Haunches', 0.5, 1.8), N('body.hump', 'Hump', 0, 1), N('body.arch', 'Back arch', -0.06, 0.1, 0.005)],
+      N('body.waist', 'Waist', 0.4, 1.25), N('body.belly', 'Belly', 0, 1), N('body.shoulders', 'Shoulders', 0.5, 1.8), N('body.haunch', 'Haunches', 0.5, 1.8), N('body.hump', 'Hump', 0, 1), N('body.humps', 'Humps', 1, 2, 1), N('body.arch', 'Back arch', -0.06, 0.1, 0.005), L('body.spines', 'Spines', (r) => r.body.chestDepth * 0.4), N('body.spineCount', 'Spine count', 4, 40, 1)],
   },
-  { title: 'Legs', ctls: [L('legs.front', 'Front'), L('legs.hind', 'Hind'), L('legs.thickness', 'Thickness'), S('legs.stance', 'Stance', ['digitigrade', 'unguligrade', 'plantigrade']), S('legs.foot', 'Feet', ['paw', 'hoof', 'cloven']), N('legs.footSize', 'Foot size', 0.5, 2)] },
+  { title: 'Legs', ctls: [L('legs.front', 'Front'), L('legs.hind', 'Hind'), L('legs.thickness', 'Thickness'), S('legs.stance', 'Stance', ['digitigrade', 'unguligrade', 'plantigrade', 'sprawling']), S('legs.foot', 'Feet', ['paw', 'hoof', 'cloven']), N('legs.footSize', 'Foot size', 0.5, 2)] },
   { title: 'Neck', ctls: [L('neck.length', 'Length'), L('neck.thickness', 'Thickness'), A('neck.angle', 'Angle', -15, 85), S('neck.mane', 'Mane', ['none', 'crest', 'ruff']), N('neck.maneSize', 'Mane size', 0.3, 2)] },
   {
     title: 'Head',
     ctls: [L('head.size', 'Skull'), L('head.muzzleLength', 'Muzzle len.'), L('head.muzzleWidth', 'Muzzle width'), L('head.muzzleDepth', 'Muzzle depth'), N('head.muzzleTaper', 'Taper', 0.3, 1.3),
-      A('head.pitch', 'Head angle', -15, 80), N('head.cheeks', 'Cheeks', 0.5, 1.8), N('head.brow', 'Brow', 0, 2), S('head.nose', 'Nose', ['pad', 'snout', 'broad']), N('head.noseSize', 'Nose size', 0.4, 2)],
+      A('head.pitch', 'Head angle', -15, 80), N('head.cheeks', 'Cheeks', 0.5, 1.8), N('head.brow', 'Brow', 0, 2), S('head.nose', 'Nose', ['pad', 'snout', 'broad', 'beak']), N('head.noseSize', 'Nose size', 0.4, 2), L('head.trunk', 'Trunk', (r) => r.head.size * 4), L('head.tusks', 'Tusks', (r) => r.head.size * 2)],
   },
-  { title: 'Eyes', ctls: [L('eyes.size', 'Size'), A('eyes.angle', 'Facing', 0, 90), C('eyes.color', 'Iris'), S('eyes.pupil', 'Pupil', ['round', 'slit', 'bar'])] },
+  { title: 'Eyes', ctls: [L('eyes.size', 'Size'), A('eyes.angle', 'Facing', 0, 90), C('eyes.color', 'Iris'), S('eyes.pupil', 'Pupil', ['round', 'slit', 'bar']), B('eyes.glow', 'Glow')] },
   { title: 'Ears', ctls: [L('ears.length', 'Length'), L('ears.width', 'Width'), N('ears.tip', 'Pointy', 0, 1), A('ears.spread', 'Spread', -20, 100), A('ears.tilt', 'Tilt back', -40, 60), N('ears.droop', 'Floppy', 0, 1), N('ears.side', 'On the side', 0, 1)] },
   { title: 'Tail', ctls: [L('tail.length', 'Length'), L('tail.thickness', 'Thickness'), N('tail.brush', 'Fluff', 0.6, 3), A('tail.lift', 'Lift', -90, 90), A('tail.curl', 'Curl', -180, 360), N('tail.tuft', 'Tuft', 0, 2)] },
-  { title: 'Horns', ctls: [S('horns.kind', 'Kind', ['none', 'cow', 'ram', 'goat', 'antlers', 'unicorn']), L('horns.length', 'Length'), L('horns.thickness', 'Thickness')] },
+  { title: 'Horns', ctls: [S('horns.kind', 'Kind', ['none', 'cow', 'ram', 'goat', 'antlers', 'unicorn', 'rhino', 'dragon']), L('horns.length', 'Length'), L('horns.thickness', 'Thickness')] },
+  { title: 'Wings', ctls: [S('wings.kind', 'Kind', ['none', 'membrane', 'feathered']), L('wings.span', 'Span', (r) => r.body.length * 1.6), N('wings.chord', 'Depth', 0.3, 1)] },
   {
     title: 'Coat',
-    ctls: [C('coat.base', 'Base'), C('coat.belly', 'Belly'), N('coat.countershade', 'Countershade', 0, 1), S('coat.pattern', 'Pattern', ['solid', 'spots', 'rosettes', 'stripes', 'patches', 'saddle', 'points', 'tabby']),
+    ctls: [C('coat.base', 'Base'), C('coat.belly', 'Belly'), N('coat.countershade', 'Countershade', 0, 1), S('coat.pattern', 'Pattern', ['solid', 'spots', 'rosettes', 'stripes', 'patches', 'saddle', 'points', 'tabby', 'scales', 'split']),
       C('coat.patternColor', 'Pattern col.'), N('coat.patternAmount', 'Amount', 0, 1), N('coat.patternScale', 'Pattern size', 0.3, 3), OC('coat.mane', 'Mane'), OC('coat.tail', 'Tail'), OC('coat.muzzle', 'Muzzle'),
-      OC('coat.earTip', 'Ear tips'), OC('coat.tailTip', 'Tail tip'), C('coat.earInner', 'Inner ear'), C('coat.nose', 'Nose'), C('coat.hoof', 'Hooves'), C('coat.horn', 'Horns'),
+      OC('coat.earTip', 'Ear tips'), OC('coat.tailTip', 'Tail tip'), C('coat.earInner', 'Inner ear'), C('coat.nose', 'Nose'), C('coat.hoof', 'Hooves'), C('coat.horn', 'Horns'), C('coat.beak', 'Beak'), OC('coat.wing', 'Wings'), OC('coat.spine', 'Spines'), OC('coat.eyePatch', 'Eye patches'),
       N('coat.socks', 'Socks', 0, 1), C('coat.sockColor', 'Sock colour'), { path: 'coat.blaze', label: 'Blaze', kind: 'bool' }, N('coat.wool', 'Wool', 0, 1), N('coat.jitter', 'Facet jitter', 0, 1)],
+  },
+  {
+    title: 'Tack (mounts)',
+    ctls: [B('tack.saddle', 'Saddle'), B('tack.bridle', 'Bridle'), B('tack.blanket', 'Blanket'), S('tack.barding', 'Barding', ['none', 'leather', 'plate']), C('tack.leather', 'Leather'), C('tack.cloth', 'Cloth'), C('tack.metal', 'Metal')],
   },
   { title: 'Mesh', ctls: [N('mesh.tris', 'Triangles', 600, 12000, 100), S('mesh.shading', 'Shading', ['flat', 'smooth']), N('mesh.resolution', 'Sculpt res.', 80, 260, 10)] },
 ];
@@ -271,7 +279,7 @@ function renderControls() {
         let max = c.max ?? 1;
         let step = c.step ?? 0.01;
         if (c.kind === 'len') {
-          const base = Math.max(Number(get(preset, c.path)) || 0, Number(v) || 0, c.path.startsWith('horns') ? state.own.head.size * 2.5 : 0.01);
+          const base = Math.max(Number(get(preset, c.path)) || 0, Number(v) || 0, c.path.startsWith('horns') ? state.own.head.size * 2.5 : 0.01, c.fallback?.(state.own) ?? 0);
           min = 0;
           max = base * 2.5;
           step = max / 400;
@@ -308,6 +316,7 @@ function renderControls() {
         sel.onchange = () => {
           set(state.own, c.path, sel.value);
           if (c.path === 'horns.kind' && sel.value !== 'none' && state.own.horns.length < 0.01) state.own.horns.length = state.own.head.size * 2;
+          if (c.path === 'wings.kind' && sel.value !== 'none' && state.own.wings.span < state.own.body.length * 0.5) state.own.wings.span = state.own.body.length * 1.6;
           rebuildSoon();
         };
       } else {
@@ -340,8 +349,20 @@ function renderAll() {
 }
 
 function initUI() {
+  renderSpecies();
+}
+
+let cat: Category = categoryOf(state.own.species);
+function renderSpecies() {
+  const tabs: [Category, string][] = [['real', '🌍 Real'], ['fantasy', '🐉 Fantasy'], ['mount', '🏇 Mounts']];
+  $('cats').innerHTML = tabs.map(([k, l]) => `<button data-c="${k}" class="${k === cat ? 'on' : ''}">${l}</button>`).join('');
+  $('cats').querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => {
+    cat = b.dataset.c as Category;
+    renderSpecies();
+  }));
   $('species').innerHTML = Object.entries(SPECIES)
-    .map(([k, s]) => `<button class="chip" data-s="${k}" title="${s.label}"><span class="em">${s.emoji}</span>${s.label}</button>`)
+    .filter(([k]) => categoryOf(k) === cat)
+    .map(([k, s]) => `<button class="chip ${k === state.own.species ? 'on' : ''}" data-s="${k}" title="${s.label}"><span class="em">${s.emoji}</span>${s.label}</button>`)
     .join('');
   document.querySelectorAll<HTMLButtonElement>('#species .chip').forEach((b) => {
     b.onclick = () => {
@@ -350,6 +371,9 @@ function initUI() {
       renderAll();
     };
   });
+}
+
+function initControls() {
   $<HTMLSelectElement>('in-hybrid').innerHTML = `<option value="">— none —</option>` + Object.entries(SPECIES).map(([k, s]) => `<option value="${k}">${s.emoji} ${s.label}</option>`).join('');
   $<HTMLSelectElement>('in-hybrid').onchange = (e) => {
     state.hybrid = (e.target as HTMLSelectElement).value;
@@ -378,6 +402,8 @@ function initUI() {
   };
   const surprise = () => {
     state = { own: randomRecipe(Math.floor(Math.random() * 1e9)), hybrid: '', blend: 0 };
+    cat = categoryOf(state.own.species);
+    renderSpecies();
     framed = '';
     renderAll();
   };
@@ -478,6 +504,7 @@ function tick() {
 }
 
 initUI();
+initControls();
 resize();
 renderAll();
 tick();

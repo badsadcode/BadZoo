@@ -95,7 +95,6 @@ interface LegTarget {
 function solveLeg(a: Anatomy, pose: Pose, G: Quat[], P: V3[], leg: Leg, tg: LegTarget) {
   const [gi, ui, li, fi, ti] = leg.chain;
   const rest = (i: number) => a.bones[i].world;
-  const side = qRotate(G[gi], [1, 0, 0]);
   const S = P[ui];
   // toe segment
   const toeR = sub(leg.tip, rest(ti));
@@ -130,11 +129,15 @@ function solveLeg(a: Anatomy, pose: Pose, G: Quat[], P: V3[], leg: Leg, tg: LegT
   pole = qRotate(G[gi], norm(pole));
   const v = norm(sub(pole, scale(u, dot(pole, u))));
   const K = add(add(S, scale(u, aLen)), scale(v, hgt));
+  // the leg's bending plane, at rest and posed: a stable twist reference even for sprawling legs
+  const restPole = norm(sub(sub(restMid, rest(ui)), scale(restU, dot(sub(restMid, rest(ui)), restU))));
+  const nRest = len(restPole) > 0.5 ? norm(cross(restU, restPole)) : ([1, 0, 0] as V3);
+  const nPose = norm(cross(u, v));
 
-  const gUpper = frameRot(sub(rest(li), rest(ui)), [1, 0, 0], sub(K, S), side);
-  const gLower = frameRot(sub(rest(fi), rest(li)), [1, 0, 0], sub(W, K), side);
-  const gFoot = frameRot(footR, [1, 0, 0], sub(TJ, W), side);
-  const gToe = frameRot(toeR, [1, 0, 0], sub(tip, TJ), side);
+  const gUpper = frameRot(sub(rest(li), rest(ui)), nRest, sub(K, S), nPose);
+  const gLower = frameRot(sub(rest(fi), rest(li)), nRest, sub(W, K), nPose);
+  const gFoot = frameRot(footR, nRest, sub(TJ, W), nPose);
+  const gToe = frameRot(toeR, nRest, sub(tip, TJ), nPose);
   pose.local[ui] = qMul(qConj(G[gi]), gUpper);
   pose.local[li] = qMul(qConj(gUpper), gLower);
   pose.local[fi] = qMul(qConj(gLower), gFoot);
@@ -170,7 +173,29 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
   const sim = Math.sqrt(legLen / 0.4);
   const tailBones = a.bones.filter((b) => b.name.startsWith('Tail')).map((b) => idx[b.name]);
   const blank = (): Pose => ({ local: Array.from({ length: nb }, () => QI), hips: [0, 0, 0] });
-  const rot = (pose: Pose, name: string, q: Quat) => (pose.local[idx[name]] = qMul(pose.local[idx[name]], q));
+  const rot = (pose: Pose, name: string, q: Quat) => {
+    if (idx[name] !== undefined) pose.local[idx[name]] = qMul(pose.local[idx[name]], q);
+  };
+  const has = (name: string) => idx[name] !== undefined;
+  const trunk = (pose: Pose, t: number, amt: number, curl = 0) => {
+    for (let i = 1; has(`Trunk${i}`); i++) rot(pose, `Trunk${i}`, qMul(qx((Math.sin(t - i * 0.7) * amt * 0.6 - curl) * DEG), qy(Math.sin(t * 0.7 - i * 0.5) * amt * DEG)));
+  };
+  // wings: folded along the body by default, flapped in Fly
+  const foldQ: Record<string, Quat[]> = {};
+  for (const w of a.wings) {
+    const sx = w.side === 'L' ? 1 : -1;
+    const restDir = (i: number) => sub(i < 2 ? a.bones[w.bones[i + 1]].world : w.fingers[0], a.bones[w.bones[i]].world);
+    const targets: V3[] = [norm([sx * 0.35, 0.45, -1]), norm([sx * 0.12, -0.2, 1]), norm([sx * 0.08, 0.02, -1])];
+    const R = targets.map((d, i) => frameRot(restDir(i), [0, 1, 0], d, [sx * 0.2, 1, 0]));
+    foldQ[w.side] = [R[0], qMul(qConj(R[0]), R[1]), qMul(qConj(R[1]), R[2])];
+  }
+  const foldWings = (pose: Pose, breathe = 0) => {
+    for (const w of a.wings) {
+      const sx = w.side === 'L' ? 1 : -1;
+      w.bones.forEach((b, i) => (pose.local[b] = qMul(foldQ[w.side][i], i === 0 ? qz(sx * breathe * DEG) : QI)));
+    }
+  };
+  const sprawl = rc.legs.stance === 'sprawling';
   const ears = (pose: Pose, t: number, amt: number) => {
     const droop = rc.ears.droop;
     rot(pose, 'Ear_L', qz(Math.sin(t) * amt * (1 - droop * 0.5)));
@@ -204,6 +229,8 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
         tailBones.forEach((b, i) => (pose.local[b] = qy(Math.sin(w * 4 - i * 0.6) * (5 + i * 2) * DEG)));
         const flick = Math.max(0, Math.sin(w * 5)) ** 12;
         ears(pose, w * 2, 6 * DEG + flick * 14 * DEG);
+        trunk(pose, w * 3, 10);
+        foldWings(pose, breathe * 2);
         return finish(pose, a.legs.map(() => ({ off: [0, 0, 0], toe: 0, foot: 0 })));
       },
     });
@@ -237,6 +264,17 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
           pose.local[b] = qMul(qy(Math.sin(w - lag) * (gallop ? 2 : 4 + i * 2.5) * DEG), qx((gallop ? Math.sin(w - lag) * 8 : 0) * DEG));
         });
         ears(pose, w, 4 * DEG);
+        trunk(pose, w * 2, 8);
+        foldWings(pose, gallop ? Math.sin(w) * 6 : 0);
+        if (sprawl) {
+          // lizards walk with their spines: a sideways S-wave from head to tail
+          const yaw = Math.sin(w) * 9 * DEG;
+          rot(pose, 'Hips', qy(yaw));
+          rot(pose, 'Spine1', qy(-yaw * 0.5));
+          rot(pose, 'Chest', qy(-yaw * 0.9));
+          rot(pose, 'Neck1', qy(yaw * 0.6));
+          tailBones.forEach((b, i) => (pose.local[b] = qMul(pose.local[b], qy(Math.sin(w - 1 - i * 0.6) * (6 + i * 3) * DEG))));
+        }
         const targets = a.legs.map((leg, i): LegTarget => {
           const ph = (((p - g.phase[i]) % 1) + 1) % 1;
           if (ph < g.duty) {
@@ -280,7 +318,37 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
         rot(pose, 'Head', qx(down * 18 * DEG + nibble * 3 * DEG));
         tailBones.forEach((b, i) => (pose.local[b] = qy(Math.sin(t * 3 - i * 0.6) * (4 + i * 2) * DEG)));
         ears(pose, t * 2, 5 * DEG);
-        return finish(pose, a.legs.map((l) => ({ off: [0, 0, 0], toe: 0, foot: 0 * (l.front ? 1 : 1) })));
+        trunk(pose, t * 3, 6, down * 25);
+        foldWings(pose);
+        return finish(pose, a.legs.map(() => ({ off: [0, 0, 0], toe: 0, foot: 0 })));
+      },
+    });
+  }
+
+  // ── Fly: wings beat, legs tucked, tail streaming (in place: the engine moves the root)
+  if (a.wings.length) {
+    const dur = 0.9 * Math.sqrt(Math.max(0.3, rc.wings.span * rc.scale) / 1.2);
+    clips.push({
+      name: 'Fly', duration: dur, loop: true, speed: legLen * 6,
+      sample(t) {
+        const w = (2 * Math.PI * t) / dur;
+        const pose = blank();
+        const beat = Math.sin(w);
+        pose.hips = [0, -beat * legLen * 0.05 + legLen * 0.1, 0];
+        rot(pose, 'Hips', qx(-4 * DEG));
+        rot(pose, 'Chest', qx(beat * 3 * DEG));
+        rot(pose, 'Neck1', qx(-10 * DEG - beat * 3 * DEG));
+        rot(pose, 'Head', qx(14 * DEG));
+        tailBones.forEach((b, i) => (pose.local[b] = qx((-6 + Math.sin(w - i * 0.7) * 4) * DEG)));
+        for (const wg of a.wings) {
+          const sx = wg.side === 'L' ? 1 : -1;
+          const th = [beat * 45, Math.sin(w - 0.6) * 22, Math.sin(w - 1.1) * 18];
+          wg.bones.forEach((b, i) => (pose.local[b] = qMul(qz(sx * th[i] * DEG), qy(sx * (i === 0 ? -8 : i === 1 ? 6 : 0) * DEG))));
+        }
+        trunk(pose, w, 5);
+        return finish(pose, a.legs.map((l): LegTarget => (l.front
+          ? { off: [0, legLen * 0.42, -legLen * 0.3], toe: 30 * DEG, foot: 75 * DEG }
+          : { off: [0, legLen * 0.35, -legLen * 0.5], toe: 30 * DEG, foot: 40 * DEG })));
       },
     });
   }

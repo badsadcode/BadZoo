@@ -167,6 +167,8 @@ export interface AnimalRecipe {
     /** dorsal spine colour ('' = horn colour) */
     spine: string;
     earInner: string;
+    /** eye patch colour (panda, raccoon), '' = none */
+    eyePatch: string;
     /** ear-tip / tail-tip colours, '' = none */
     earTip: string;
     tailTip: string;
@@ -236,6 +238,7 @@ export const BASE: AnimalRecipe = {
     wing: '',
     spine: '',
     earInner: '#8e5d3a',
+    eyePatch: '',
     earTip: '',
     tailTip: '',
     socks: 0,

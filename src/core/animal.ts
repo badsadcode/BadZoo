@@ -11,6 +11,8 @@ import { hexRgb, jitter, LOCKED_REGIONS, paintFacet, PaintContext, RGB, srgbToLi
 import type { AnimalRecipe } from './recipe';
 import { Region, sampleGrid } from './sdf';
 import { owner, skinVertex } from './skin';
+import { buildTack } from './tack';
+import { buildWings } from './wings';
 
 export interface MeshOut {
   positions: Float32Array;
@@ -27,13 +29,17 @@ export interface Animal {
   anatomy: Anatomy;
   body: MeshOut;
   eyes: MeshOut;
+  /** riding gear, split by material */
+  tack: MeshOut | null;
+  metal: MeshOut | null;
+  tackPieces: string[];
   clips: Clip[];
-  stats: { tris: number; verts: number; sculptTris: number; shapes: number; ms: number; height: number; length: number };
+  stats: { tris: number; bodyTris: number; verts: number; sculptTris: number; shapes: number; ms: number; height: number; length: number };
 }
 
 /** extra decimation budget for the parts people look at */
 const IMPORTANCE: Partial<Record<Region, number>> = {
-  head: 5, muzzle: 6, jaw: 4, nose: 9, brow: 6, ear: 5, earInner: 5, paw: 2.5, hoof: 2.5, horn: 3, tailTip: 1.5, mane: 1.5,
+  head: 5, muzzle: 6, jaw: 4, nose: 9, brow: 6, ear: 5, earInner: 5, paw: 2.5, hoof: 2.5, horn: 3, tailTip: 1.5, mane: 1.5, beak: 6, trunk: 2.5, spine: 2, wing: 1.5,
 };
 
 const v3 = (a: ArrayLike<number>, i: number): V3 => [a[i * 3], a[i * 3 + 1], a[i * 3 + 2]];
@@ -43,6 +49,7 @@ function extent(a: Anatomy): number {
   let mn = [Infinity, Infinity, Infinity];
   let mx = [-Infinity, -Infinity, -Infinity];
   for (const p of a.prims) {
+    if (p.region === 'wing') continue; // wings shouldn't coarsen the body's grid
     const pts = p.kind === 'cone' ? [p.a, p.b] : [p.c];
     const r = p.kind === 'cone' ? Math.max(p.ra, p.rb) : Math.max(...p.r);
     for (const q of pts)
@@ -82,7 +89,7 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
 
   // ── skin + paint
   const size = anat.dims.withers;
-  const ctx: PaintContext = { rc, size, withers: anat.dims.withers };
+  const ctx: PaintContext = { rc, size, withers: anat.dims.withers, eyes: anat.eyes };
   const nV = low.pos.length / 3;
   const skin = Array.from({ length: nV }, (_, i) => skinVertex(prims, v3(low.pos, i), h));
   const nT = low.tri.length / 3;
@@ -147,6 +154,11 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
     body = { positions: Float32Array.from(low.pos), normals: N, colors: Cc, joints: J, weights: Wt, indices: low.tri };
   }
 
+  // ── wing sheets join the coat primitive (same material, explicit flat facets)
+  const sheet = buildWings(anat, rc);
+  if (sheet) body = mergeMesh(body, sheet);
+  const tackOut = rc.tack.saddle || rc.tack.bridle || rc.tack.blanket || rc.tack.barding !== 'none' ? buildTack(anat, rc, h) : { tack: null, metal: null, pieces: [] };
+
   const eyes = eyeMesh(anat, rc);
   const clips = opts.clips === false ? [] : buildClips(anat, rc);
   let height = 0;
@@ -162,8 +174,11 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
     anatomy: anat,
     body,
     eyes,
+    tack: tackOut.tack,
+    metal: tackOut.metal,
+    tackPieces: tackOut.pieces,
     clips,
-    stats: { tris: nT + eyes.indices.length / 3, verts: body.positions.length / 3, sculptTris, shapes: prims.length, ms: performance.now() - t0, height, length: zmax - zmin },
+    stats: { bodyTris: nT, tris: body.indices.length / 3 + eyes.indices.length / 3 + ((tackOut.tack?.indices.length ?? 0) + (tackOut.metal?.indices.length ?? 0)) / 3, verts: body.positions.length / 3, sculptTris, shapes: prims.length, ms: performance.now() - t0, height, length: zmax - zmin },
   };
 }
 
@@ -205,6 +220,28 @@ function smoothLabels(m: TriMesh, col: RGB[], locked: boolean[], iters: number) 
     }
     for (let t = 0; t < nT; t++) col[t] = next[t];
   }
+}
+
+function mergeMesh(m: MeshOut, s: { pos: number[]; nrm: number[]; col: number[]; joints: number[]; weights: number[] }): MeshOut {
+  const n0 = m.positions.length / 3;
+  const n1 = s.pos.length / 3;
+  const cat = <T extends Float32Array | Uint8Array>(a: T, b: number[], C: new (n: number) => T) => {
+    const o = new C(a.length + b.length);
+    o.set(a);
+    o.set(b, a.length);
+    return o;
+  };
+  const idx = new Uint32Array(m.indices.length + n1);
+  idx.set(m.indices);
+  for (let i = 0; i < n1; i++) idx[m.indices.length + i] = n0 + i;
+  return {
+    positions: cat(m.positions, s.pos, Float32Array),
+    normals: cat(m.normals, s.nrm, Float32Array),
+    colors: cat(m.colors, s.col, Float32Array),
+    joints: cat(m.joints, s.joints, Uint8Array),
+    weights: cat(m.weights, s.weights, Float32Array),
+    indices: idx,
+  };
 }
 
 // ───────────────────────────────────────────────────────────── eyes ──

@@ -45,11 +45,37 @@ function worley(p: V3, seed: number): number {
   return best;
 }
 
+/** Worley F1, F2 and a stable random value for the nearest cell (scales) */
+function worleyCells(p: V3, seed: number): [number, number, number] {
+  const xi = Math.floor(p[0]);
+  const yi = Math.floor(p[1]);
+  const zi = Math.floor(p[2]);
+  let f1 = 9;
+  let f2 = 9;
+  let id = 0;
+  for (let dz = -1; dz <= 1; dz++)
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const cx = xi + dx;
+        const cy = yi + dy;
+        const cz = zi + dz;
+        const d = Math.hypot(p[0] - cx - hash3i(cx, cy, cz, seed), p[1] - cy - hash3i(cx, cy, cz, seed + 1), p[2] - cz - hash3i(cx, cy, cz, seed + 2));
+        if (d < f1) {
+          f2 = f1;
+          f1 = d;
+          id = hash3i(cx, cy, cz, seed + 3);
+        } else if (d < f2) f2 = d;
+      }
+  return [f1, f2, id];
+}
+
 export interface PaintContext {
   rc: AnimalRecipe;
   /** withers height (pattern scale reference) */
   size: number;
   withers: number;
+  /** eye centres + radius, for eye patches */
+  eyes?: { c: V3; r: number }[];
 }
 
 /** What the facet "is": the shape it sits on, and how far along that shape's chain. */
@@ -70,7 +96,7 @@ export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner): RGB {
   const q: V3 = [p[0] / ctx.size, p[1] / ctx.size, p[2] / ctx.size];
   const fs = 1 / Math.max(0.2, C.patternScale);
   const amt = C.patternAmount;
-  const furry = !['nose', 'hoof', 'horn', 'earInner'].includes(reg);
+  const furry = !['nose', 'hoof', 'horn', 'earInner', 'beak', 'spine', 'wing'].includes(reg);
   const isLeg = reg === 'leg' || reg === 'lowerLeg' || reg === 'paw';
 
   // ── countershading (lighter underneath)
@@ -129,6 +155,22 @@ export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner): RGB {
         }
         break;
       }
+      case 'scales': {
+        // irregular plates: each cell its own shade between base and pattern, darker seams
+        const [f1, f2, id] = worleyCells([q[0] * 9 * fs, q[1] * 9 * fs, q[2] * 9 * fs], rc.seed);
+        if (n[1] < lerp(-0.85, 0.35, C.countershade) && C.countershade > 0) break; // belly plates stay clean
+        col = mix(col, pat, id * amt * 0.7);
+        on = f2 - f1 < 0.08 * (0.5 + amt);
+        if (on) col = mix(col, pat, 0.75);
+        on = false;
+        break;
+      }
+      case 'split': {
+        // front half / back half (griffin: eagle at the front, lion at the back)
+        const zs = ctx.size * lerp(0.6, -0.6, amt);
+        on = p[2] > zs + noise3([q[0] * 4, q[1] * 4, q[2] * 4]) * ctx.size * 0.06;
+        break;
+      }
       case 'solid':
         break;
     }
@@ -136,6 +178,9 @@ export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner): RGB {
   }
 
   // ── markings
+  if (C.eyePatch && ctx.eyes && (reg === 'head' || reg === 'brow' || reg === 'muzzle')) {
+    for (const e of ctx.eyes) if (Math.hypot(p[0] - e.c[0], p[1] - e.c[1], p[2] - e.c[2]) < e.r * 2.5) col = hexRgb(C.eyePatch);
+  }
   if (C.mane && reg === 'mane') col = hexRgb(C.mane);
   if (C.tail && (reg === 'tail' || reg === 'tailTip')) col = hexRgb(C.tail);
   if (C.muzzle && (reg === 'muzzle' || reg === 'jaw')) col = hexRgb(C.muzzle);
@@ -153,6 +198,9 @@ export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner): RGB {
   if (C.tailTip && ((reg === 'tail' && o.u > 0.8) || reg === 'tailTip')) col = hexRgb(C.tailTip);
   if (reg === 'tailTip' && !C.tailTip) col = mix(col, pat, 0.8);
   if (reg === 'nose') col = hexRgb(C.nose);
+  if (reg === 'beak') col = hexRgb(C.beak);
+  if (reg === 'spine') col = hexRgb(C.spine || C.horn);
+  if (reg === 'wing') col = C.wing ? hexRgb(C.wing) : col;
   if (reg === 'hoof') col = hexRgb(C.hoof);
   if (reg === 'horn') col = mix(hexRgb(C.horn), hexRgb(C.hoof), 0.15);
   if (reg === 'paw' && n[1] < -0.55) col = hexRgb(C.nose); // pads
@@ -161,7 +209,7 @@ export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner): RGB {
 }
 
 /** regions whose colour is a hard rule (never smoothed into their neighbours) */
-export const LOCKED_REGIONS = new Set(['nose', 'hoof', 'horn', 'earInner', 'paw']);
+export const LOCKED_REGIONS = new Set(['nose', 'hoof', 'horn', 'earInner', 'paw', 'beak', 'spine']);
 
 /** hand-made facet jitter: a few % of brightness per facet */
 export function jitter(col: RGB, rc: AnimalRecipe, faceId: number): RGB {

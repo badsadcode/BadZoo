@@ -437,7 +437,24 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
       return i === 0 ? W(['Head', 0.5], ['Trunk1', 0.5]) : W([`Trunk${b}`, 1]);
     };
     const r0 = Math.max(tipR * 0.95, Hd.trunk * 0.09);
-    const pts = hornChain(add(muzzleTip, scale(f, -tipR * 0.3)), norm(add(f, scale(uh, -0.5))), n, Hd.trunk / n, r0, r0 * 0.45, (d, i) => norm(rotX(d, (i < n - 2 ? 16 : -22) * DEG)), 'trunk', tw);
+    const start = add(muzzleTip, scale(f, -tipR * 0.3));
+    const dir0 = norm(add(f, scale(uh, -0.5)));
+    const turn = (d: V3, i: number) => norm(rotX(d, (i < n - 2 ? 16 : -22) * DEG));
+    // never drag the trunk through the floor: shorten it until the tip clears the ground
+    let tl = Hd.trunk;
+    for (let it = 0; it < 12; it++) {
+      let p = start;
+      let d = dir0;
+      let lowY = Infinity;
+      for (let i = 0; i < n; i++) {
+        p = add(p, scale(d, tl / n));
+        lowY = Math.min(lowY, p[1]);
+        d = turn(d, i);
+      }
+      if (lowY > r0 * 0.9 + groundClear * 0.2) break;
+      tl *= 0.9;
+    }
+    const pts = hornChain(start, dir0, n, tl / n, r0, r0 * 0.45, (d, i) => norm(rotX(d, (i < n - 2 ? 16 : -22) * DEG)), 'trunk', tw);
     for (let i = 0; i < TRUNK_BONES; i++) world[`Trunk${i + 1}`] = pts[i * 2];
     const end = pts[n];
     const dirE = norm(sub(end, pts[n - 1]));
@@ -586,7 +603,7 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
       } else if (Hn.kind === 'dragon') {
         // long swept-back horns plus a smaller pair below them
         const n = 7;
-        hornChain(s0, norm(add(add(scale(uh, 0.45), scale(f, -1)), scale(side, 0.3))), n, HL / n, HT, HT * 0.12, (d) => norm(rotAxis(d, side, sx * 7 * DEG)));
+        hornChain(s0, norm(add(add(scale(uh, 0.35), scale(f, -1)), scale(side, 0.28))), n, HL / n, HT, HT * 0.12, (d) => norm(rotX(d, -5 * DEG)));
         const s2 = sub(surfaceAlong(C, norm(add(add(side, scale(f, -0.6)), scale(uh, -0.1)))), scale(side, HT * 0.4));
         hornChain(s2, norm(add(add(side, scale(f, -1)), scale(uh, -0.1))), 4, (HL * 0.45) / 4, HT * 0.65, HT * 0.12, (d) => norm(rotAxis(d, side, sx * 5 * DEG)));
       } else if (Hn.kind === 'antlers') {
