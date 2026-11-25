@@ -8,7 +8,7 @@ self.onmessage = (e: MessageEvent<{ id: number; recipe: AnimalRecipe }>) => {
   try {
     const an = generateAnimal(recipe);
     const glb = exportGlb(an);
-    (self as unknown as Worker).postMessage({ id, glb, stats: an.stats, clips: an.clips.map((c) => c.name) }, [glb.buffer]);
+    (self as unknown as Worker).postMessage({ id, glb, stats: an.stats, clips: an.clips.map((c) => c.name), once: an.clips.filter((c) => !c.loop).map((c) => c.name) }, [glb.buffer]);
   } catch (err) {
     (self as unknown as Worker).postMessage({ id, error: String((err as Error)?.stack ?? err) });
   }

@@ -44,6 +44,20 @@ covers. Move the root at that speed to avoid foot sliding.
 | Gallop | rotary, duty 0.3, spine flexion |
 | Eat | head to the ground and nibble |
 | Fly | winged animals only: wing beat, legs tucked, tail streaming (`speed` = suggested airspeed) |
+| Glide | winged animals only: wings locked open, gentle banking sway |
+| Attack | one-shot. Style picked from the anatomy: **bite** lunge (front feet step in), **gore** (horns, tusks or trunk: head down, drive, toss) or **peck** (birds). Wings flare |
+| Hit | one-shot flinch: recoil, ears pinned, head turned away |
+| Death | one-shot: knees buckle, rolls onto its side, legs go limp. **Hold the last frame** |
+| Jump | one-shot, in place: crouch, launch (~0.55 leg lengths), tuck, land (not for sprawling lizards) |
+| Sit | loop: haunches down, front legs straight (birds roost) |
+| Sleep | loop: belly on the floor, legs folded, head down (birds tuck the head over the shoulder) |
+| Roar | one-shot: head up, bellow with a tremble; trunks curl up, wings flare |
+| Rear | one-shot, hoofed animals and saddled mounts: up on the hind legs, front legs paw the air |
+
+Bipeds (birds) get **Walk / Run / Hop** in place of Walk / Trot / Gallop. Swimmers get
+**Idle / Swim / Dash / Bite / Hit / Death** (Death is the classic belly-up float).
+
+One-shot clips (`loop: false`) start and end near the Idle pose, so cross-fade in and out of them.
 
 Cycle periods scale with √(leg length) (dynamic similarity), so a cat steps faster than a horse.
 

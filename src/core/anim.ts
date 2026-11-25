@@ -12,6 +12,7 @@
 import type { Anatomy, Leg } from './anatomy';
 import { add, clamp, cross, DEG, dot, len, norm, qMul, qNorm, qRotate, Quat, qx, qy, qz, QI, scale, smooth, sub, V3 } from './math';
 import type { AnimalRecipe } from './recipe';
+import { actionClips, swimActionClips } from './actions';
 
 export interface Pose {
   /** local rotation per bone (rest rotations are identity, so this is also the delta) */
@@ -82,7 +83,7 @@ export function fk(a: Anatomy, pose: Pose): { G: Quat[]; P: V3[] } {
   return { G, P };
 }
 
-interface LegTarget {
+export interface LegTarget {
   /** toe-tip offset from its rest position */
   off: V3;
   /** extra rotation of the toe segment about the lateral axis (radians, + curls back) */
@@ -390,6 +391,7 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
       },
     });
   }
+  clips.push(...actionClips(a, rc, { blank, rot, finish, foldWings, ears, trunk, tailBones, legLen, sim }));
   return clips;
 }
 
@@ -440,5 +442,6 @@ function swimClips(a: Anatomy, rc: AnimalRecipe, blank: () => Pose, rot: (p: Pos
         return pose;
       },
     },
+    ...swimActionClips(rc, blank, rot, tailBones, size),
   ];
 }

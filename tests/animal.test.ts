@@ -95,6 +95,16 @@ describe.each(Object.keys(SPECIES))('%s', (sp) => {
   it('has the features its recipe asks for', () => {
     const rc = an.recipe;
     expect(an.clips.some((c) => c.name === 'Fly')).toBe(rc.wings.kind !== 'none');
+    const names = an.clips.map((c) => c.name);
+    const want = (rc.plan ?? 'quadruped') === 'swimmer' ? ['Idle', 'Swim', 'Bite', 'Hit', 'Death'] : ['Idle', 'Walk', 'Eat', 'Attack', 'Hit', 'Death', 'Sit', 'Sleep', 'Roar'];
+    for (const n of want) expect(names).toContain(n);
+    for (const n of ['Attack', 'Hit', 'Death']) if (names.includes(n)) expect(an.clips.find((c) => c.name === n)!.loop).toBe(false);
+    if ((rc.plan ?? 'quadruped') !== 'swimmer') {
+      // Death ends lying on its side: the hips have rolled most of the way over, and sunk
+      const end = an.clips.find((c) => c.name === 'Death')!.sample(1e9);
+      expect(Math.abs(end.local[an.anatomy.index.Hips][3])).toBeLessThan(Math.cos((60 * Math.PI) / 360));
+      expect(end.hips[1]).toBeLessThan(0);
+    }
     if (rc.wings.kind !== 'none') expect(rc.wings.walk ? an.anatomy.index.FrontFinger1_L : an.anatomy.index.WingHand_L).toBeDefined();
     if (rc.head.trunk > 0) expect(an.anatomy.index.Trunk1).toBeDefined();
     if (rc.tack.saddle) {

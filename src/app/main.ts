@@ -16,6 +16,9 @@ interface State {
 }
 let state: State = loadFromHash() ?? { own: presetRecipe('dog', 1), hybrid: '', blend: 0 };
 let clipName = 'Idle';
+/** clips that play once (Attack, Death…): the viewer holds the last frame, then replays */
+let oneShots = new Set<string>();
+let replayTimer = 0;
 const toggles = { skeleton: false, wire: false, turn: true };
 let lastGlb: Uint8Array | null = null;
 
@@ -124,8 +127,18 @@ function playClip(name: string) {
   clipName = name;
   if (actor) {
     actor.mixer.stopAllAction();
+    clearTimeout(replayTimer);
     const c = actor.clips.find((x) => x.name === name) ?? actor.clips[0];
-    if (c) actor.mixer.clipAction(c).reset().play();
+    if (c) {
+      const act = actor.mixer.clipAction(c).reset();
+      if (oneShots.has(c.name)) {
+        act.setLoop(THREE.LoopOnce, 1);
+        act.clampWhenFinished = true;
+        const hold = c.name === 'Death' ? 1800 : 600;
+        replayTimer = window.setTimeout(() => clipName === name && playClip(name), c.duration * 1000 + hold);
+      } else act.setLoop(THREE.LoopRepeat, Infinity);
+      act.play();
+    }
   }
   document.querySelectorAll<HTMLButtonElement>('#clips button').forEach((b) => b.classList.toggle('on', b.dataset.clip === name));
 }
@@ -134,7 +147,10 @@ function renderClips(names: string[]) {
   const el = $('clips');
   if (el.dataset.names === names.join()) return;
   el.dataset.names = names.join();
-  const icon: Record<string, string> = { Idle: '🧘', Walk: '🚶', Trot: '🐾', Gallop: '💨', Eat: '🌿', Fly: '🪽' };
+  const icon: Record<string, string> = {
+    Idle: '🧘', Walk: '🚶', Trot: '🐾', Gallop: '💨', Run: '🏃', Hop: '🐇', Eat: '🌿', Fly: '🪽', Glide: '🦅', Swim: '🌊', Dash: '💨',
+    Attack: '⚔️', Bite: '🦷', Hit: '💥', Death: '💀', Jump: '⤴️', Sit: '🪑', Sleep: '💤', Roar: '📢', Rear: '🐎',
+  };
   el.innerHTML = names.map((n) => `<button data-clip="${n}">${icon[n] ?? '▶'} ${n}</button>`).join('');
   el.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => playClip(b.dataset.clip!)));
 }
@@ -160,7 +176,8 @@ let reqId = 0;
 let pending = false;
 let queued = false;
 worker.onmessage = async (e) => {
-  const { id, glb, stats, clips, error } = e.data;
+  const { id, glb, stats, clips, once, error } = e.data;
+  oneShots = new Set(once ?? []);
   pending = false;
   $('busy').classList.remove('show');
   if (error) {
@@ -444,7 +461,7 @@ function initControls() {
   $('btn-export').onclick = () => {
     if (!lastGlb) return;
     download(new Blob([lastGlb as BlobPart], { type: 'model/gltf-binary' }), `${slug()}.glb`);
-    toast('📦 GLB exported: skinned, rigged, 5 clips');
+    toast('📦 GLB exported: skinned, rigged, all clips');
   };
   $('btn-save').onclick = () => {
     download(new Blob([JSON.stringify({ badzoo: 1, ...state }, null, 2)], { type: 'application/json' }), `${slug()}.badzoo.json`);
