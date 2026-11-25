@@ -1,0 +1,26 @@
+{
+  "name": "badzoo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "BadZoo: procedural generator of low-poly, sculpted, skinned, rigged and animated animals.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "cli": "tsx tools/cli.ts"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/three": "^0.170.0",
+    "gltf-validator": "^2.0.0-dev.3.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
+  }
+}
