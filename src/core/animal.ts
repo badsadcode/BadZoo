@@ -7,6 +7,8 @@ import { buildClips, Clip } from './anim';
 import { decimate } from './decimate';
 import { cross, norm, sub, V3 } from './math';
 import { flipWinding, relax, signedVolume, surfaceNets, TriMesh } from './mesher';
+import { gridLaplacian, remesh } from './remesh';
+import type { Grid } from './sdf';
 import { hexRgb, jitter, LOCKED_REGIONS, paintFacet, PaintContext, RGB, srgbToLinear } from './paint';
 import type { AnimalRecipe } from './recipe';
 import { Region, sampleGrid } from './sdf';
@@ -41,6 +43,64 @@ export interface Animal {
 const IMPORTANCE: Partial<Record<Region, number>> = {
   head: 5, muzzle: 6, jaw: 4, nose: 9, brow: 6, ear: 5, earInner: 5, paw: 2.5, hoof: 2.5, horn: 3, tailTip: 1.5, mane: 1.5, beak: 6, trunk: 2.5, spine: 2, wing: 1.5,
 };
+
+/**
+ * Where the remesher should spend triangles (relative edge length, 1 = average):
+ *  - finer on what people look at (face, ears, feet), via region importance
+ *  - finer on tight curves (ear tips, horns, toes), via the field's curvature
+ *  - extra edge loops around joints, so elbows and knees have geometry to bend with
+ */
+function sizeField(a: Anatomy, g: Grid, dense: TriMesh, target: number, rc: AnimalRecipe) {
+  let area = 0;
+  for (let i = 0; i < dense.tri.length; i += 3) {
+    const [p, q, r] = [0, 1, 2].map((k) => v3(dense.pos, dense.tri[i + k]));
+    area += Math.hypot(...cross(sub(q, p), sub(r, p))) / 2;
+  }
+  const Lref = Math.sqrt(area / ((Math.sqrt(3) / 4) * target));
+  // coarse lookup of region importance near the surface
+  const n = 40;
+  const ext = [(g.nx - 1) * g.h, (g.ny - 1) * g.h, (g.nz - 1) * g.h];
+  const cs = Math.max(...ext) / n;
+  const dims = ext.map((e) => Math.ceil(e / cs) + 1);
+  const imp = new Float32Array(dims[0] * dims[1] * dims[2]).fill(1);
+  for (let z = 0; z < dims[2]; z++)
+    for (let y = 0; y < dims[1]; y++)
+      for (let x = 0; x < dims[0]; x++) {
+        const p: V3 = [g.origin[0] + x * cs, g.origin[1] + y * cs, g.origin[2] + z * cs];
+        const d = gridSampleSafe(g, p);
+        if (Math.abs(d) > cs * 1.8) continue;
+        imp[(z * dims[1] + y) * dims[0] + x] = IMPORTANCE[owner(a.prims, p).prim.region] ?? 1;
+      }
+  const impAt = (x: number, y: number, z: number) => {
+    const ix = Math.max(0, Math.min(dims[0] - 1, Math.round((x - g.origin[0]) / cs)));
+    const iy = Math.max(0, Math.min(dims[1] - 1, Math.round((y - g.origin[1]) / cs)));
+    const iz = Math.max(0, Math.min(dims[2] - 1, Math.round((z - g.origin[2]) / cs)));
+    return imp[(iz * dims[1] + iy) * dims[0] + ix];
+  };
+  const jointNames = ['Forearm', 'FrontFoot', 'Shin', 'HindFoot', 'UpperArm', 'Thigh'].flatMap((j) => [`${j}_L`, `${j}_R`]).concat(['Neck1', 'Tail1', 'Tail2']);
+  const joints = jointNames.filter((j) => a.index[j] !== undefined).map((j) => a.bones[a.index[j]].world);
+  const jr = rc.legs.thickness * rc.scale * 1.6;
+  return (x: number, y: number, z: number) => {
+    const sImp = Math.pow(impAt(x, y, z), -0.42);
+    const k = Math.abs(gridLaplacian(g, x, y, z)) / 2;
+    const sCurv = k > 1e-6 ? Math.min(1.4, 1.15 / (k * Lref)) : 1.4;
+    let s = Math.min(sImp, sCurv);
+    let near = 0;
+    for (const j of joints) near = Math.max(near, Math.exp(-((x - j[0]) ** 2 + (y - j[1]) ** 2 + (z - j[2]) ** 2) / (jr * jr)));
+    s *= 1 - 0.35 * near;
+    return Math.max(0.25, Math.min(1.6, s));
+  };
+}
+
+function gridSampleSafe(g: Grid, p: V3) {
+  const fx = (p[0] - g.origin[0]) / g.h;
+  const fy = (p[1] - g.origin[1]) / g.h;
+  const fz = (p[2] - g.origin[2]) / g.h;
+  const ix = Math.max(0, Math.min(g.nx - 1, Math.round(fx)));
+  const iy = Math.max(0, Math.min(g.ny - 1, Math.round(fy)));
+  const iz = Math.max(0, Math.min(g.nz - 1, Math.round(fz)));
+  return g.d[(iz * g.ny + iy) * g.nx + ix];
+}
 
 const v3 = (a: ArrayLike<number>, i: number): V3 => [a[i * 3], a[i * 3 + 1], a[i * 3 + 2]];
 
@@ -85,7 +145,9 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
   const nD = dense.pos.length / 3;
   const imp = new Float64Array(nD);
   for (let i = 0; i < nD; i++) imp[i] = IMPORTANCE[owner(prims, v3(dense.pos, i)).prim.region] ?? 1;
-  const low = decimate(dense, { targetTris: Math.max(300, rc.mesh.tris), weight: imp });
+  const target = Math.max(300, rc.mesh.tris);
+  let low = decimate(dense, { targetTris: Math.round(target * 1.6), weight: imp });
+  if (rc.mesh.topology === 'remesh') low = remesh(low, grid, { targetTris: target, sizeAt: sizeField(anat, grid, dense, target, rc), iterations: 6 });
 
   // ── skin + paint
   const size = anat.dims.withers;

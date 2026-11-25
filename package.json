@@ -12,6 +12,7 @@
     "cli": "tsx tools/cli.ts"
   },
   "dependencies": {
+    "fflate": "^0.8.2",
     "three": "^0.170.0"
   },
   "devDependencies": {
