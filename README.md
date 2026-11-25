@@ -17,6 +17,7 @@ quadruped skeleton and procedural gaits, all from a seed-reproducible recipe.
 | ![Topology](docs/topology.webp) | ![Atlas](docs/atlas.webp) |
 
 - **App:** `npm install && npm run dev`
+- **Devlog:** `devlog.html` on the site: the intake journal of the BadZoo Sanctuary for Traumatised Low-Poly Creatures (non-technical, mostly true)
 - **Rig / export contract:** [`docs/RIG.md`](docs/RIG.md)
 
 ## What you get

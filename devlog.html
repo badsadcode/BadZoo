@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BadZoo Devlog</title>
+    <meta name="description" content="The intake journal of the BadZoo Sanctuary for Traumatised Low-Poly Creatures. A Bad Ideas Works devlog." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%231b1726'/><polygon points='14,40 22,18 30,30 46,26 54,40 46,50 20,50' fill='%23ffb35c'/><polygon points='22,18 26,8 30,30' fill='%237c5cff'/><circle cx='42' cy='34' r='3' fill='%231b1726'/></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:ital,wght@0,500;0,700;0,800;1,500&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #15121f;
+        --card: #1e1a2c;
+        --card2: #272238;
+        --line: #3a3352;
+        --text: #ece8f6;
+        --dim: #a79fc2;
+        --violet: #7c5cff;
+        --orange: #ffb35c;
+        --pink: #ff6fa8;
+        --green: #5fd39a;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body { margin: 0; background: var(--bg); color: var(--text); font: 500 17px/1.65 Nunito, system-ui, sans-serif; }
+      a { color: var(--orange); }
+      .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+      header.hero { position: relative; overflow: hidden; padding: 56px 0 28px; background: radial-gradient(ellipse at 50% 0%, #2e2546 0%, var(--bg) 70%); text-align: center; }
+      .kicker { font: 400 13px Bungee, sans-serif; letter-spacing: 2px; color: var(--violet); }
+      h1 { font: 400 clamp(34px, 7vw, 64px)/1.05 Bungee, sans-serif; margin: 10px 0 8px; color: var(--orange); }
+      h1 span { color: var(--violet); }
+      .sub { color: var(--dim); font-size: 19px; margin: 0 auto 26px; max-width: 600px; }
+      .hero img { width: 100%; max-width: 1100px; display: block; margin: 0 auto; border-radius: 18px; border: 1px solid var(--line); }
+      .cta { display: inline-flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 22px 0 0; }
+      .btn { display: inline-block; padding: 10px 18px; border-radius: 10px; background: var(--violet); color: #fff; text-decoration: none; font-weight: 800; }
+      .btn.ghost { background: var(--card2); border: 1px solid var(--line); color: var(--text); }
+      .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 34px 0 10px; }
+      .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; text-align: center; }
+      .stat b { display: block; font: 400 28px Bungee, sans-serif; color: var(--orange); }
+      .stat small { color: var(--dim); font-size: 13.5px; }
+      .day { margin: 48px 0 6px; display: flex; align-items: center; gap: 12px; }
+      .day .badge { font: 400 13px Bungee, sans-serif; background: var(--violet); color: #fff; padding: 5px 11px; border-radius: 8px; white-space: nowrap; }
+      .day hr { flex: 1; border: 0; border-top: 1px dashed var(--line); }
+      article.entry { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px 24px; margin: 18px 0; }
+      .time { font: 400 12px Bungee, sans-serif; color: var(--violet); letter-spacing: 1px; }
+      h2 { font: 400 24px/1.2 Bungee, sans-serif; margin: 6px 0 12px; color: var(--text); }
+      article p { margin: 0 0 12px; }
+      figure { margin: 16px 0 4px; }
+      figure img { width: 100%; display: block; border-radius: 12px; border: 1px solid var(--line); }
+      figcaption { color: var(--dim); font-size: 14.5px; font-style: italic; margin-top: 8px; text-align: center; }
+      blockquote { margin: 14px 0; padding: 12px 16px; background: var(--card2); border-left: 4px solid var(--orange); border-radius: 0 12px 12px 0; font-style: italic; }
+      blockquote footer { font-style: normal; color: var(--dim); font-size: 14px; margin-top: 6px; }
+      .bloopers { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 10px; }
+      .bloopers li { background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px 12px 52px; position: relative; }
+      .bloopers li::before { content: attr(data-e); position: absolute; left: 14px; top: 10px; font-size: 24px; }
+      .bloopers b { color: var(--pink); }
+      .bloopers em { color: var(--green); font-style: normal; font-weight: 700; }
+      .pill { display: inline-block; background: var(--card2); border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px; margin: 3px 2px; font-size: 14px; }
+      .score { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; background: var(--card2); border-radius: 12px; padding: 14px 16px; font-size: 15.5px; }
+      .score span:nth-child(even) { color: var(--orange); font-weight: 800; text-align: right; }
+      footer.end { text-align: center; color: var(--dim); padding: 50px 0 70px; font-size: 15px; }
+      footer.end .motto { font: 400 15px Bungee, sans-serif; color: var(--orange); margin-bottom: 8px; }
+      @media (max-width: 560px) {
+        body { font-size: 16px; }
+        article.entry { padding: 18px 16px; }
+        h2 { font-size: 20px; }
+      }
+          .chart { background: var(--card2); border: 1px dashed var(--line); border-radius: 12px; padding: 12px 16px; margin: 14px 0; font-size: 15.5px; }
+      .chart b { color: var(--orange); font-family: Bungee, sans-serif; font-weight: 400; letter-spacing: 0.5px; font-size: 13px; display: block; margin-bottom: 4px; }
+      .stamp { display: inline-block; transform: rotate(-4deg); border: 3px solid var(--pink); color: var(--pink); font: 400 15px Bungee, sans-serif; padding: 2px 10px; border-radius: 8px; margin: 4px 0 10px; }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="wrap">
+        <div class="kicker">BAD IDEAS WORKS · ANIMAL RESCUE JOURNAL</div>
+        <h1>BAD<span>ZOO</span> SANCTUARY</h1>
+        <p class="sub">A home for low-poly creatures who have been through things. Mostly through us. This is our intake journal.</p>
+      </div>
+      <img src="./devlog/hero.webp" alt="Eight residents of the sanctuary: a shepherd dog, an orange tabby cat, an elephant, a giraffe, a red dragon, a griffin, a panda and an armoured warhorse" />
+      <div class="cta">
+        <a class="btn" href="./index.html">🦒 Visit the residents</a>
+        <a class="btn ghost" href="#rules">📜 Shelter rules</a>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="stats">
+        <div class="stat"><b>46</b><small>residents and counting</small></div>
+        <div class="stat"><b>1</b><small>cat in ongoing therapy</small></div>
+        <div class="stat"><b>0</b><small>bubble butts (since lunch)</small></div>
+        <div class="stat"><b>300</b><small>triangles of minimum dignity</small></div>
+        <div class="stat"><b>0</b><small>spiders (request pending)</small></div>
+      </div>
+
+      <div class="day"><span class="badge">DAY 1</span><hr /></div>
+
+      <article class="entry">
+        <div class="time">MORNING · FRONT DESK</div>
+        <h2>The founder brings home a dog</h2>
+        <p>It started, as these things do, with Tom. Tom runs Bad Ideas Works and already had a building full of procedurally generated people. He looked at them for a long moment and said what every responsible adult says before a terrible decision: <em>"Would be cool to have animals too. Don't you think?"</em></p>
+        <p>Sage, the night keeper (and the one writing this journal), did think. Sage also made the mistake of saying so out loud. By lunchtime we had a shelter.</p>
+        <p>The first resident was Rex, a German shepherd. Tom had one rule for intake: <strong>no animal may be assembled from sausages.</strong> Plenty of low-poly zoos glue tubes onto a bean and call it a horse. Not here. Every resident is pushed out of digital clay, muscle by muscle: ribcage, shoulders, haunches, cheeks, little eyebrows. The clay is smoothed together until the animal is one piece, and only then trimmed down to something a game can afford.</p>
+        <blockquote>"It's not a sausage dog. It's a dog. That happens to be low-poly."<footer>— Sage, filling in the intake form</footer></blockquote>
+      </article>
+
+      <article class="entry">
+        <div class="time">AFTERNOON · THE YARD</div>
+        <h2>Eleven more arrive. They can all walk.</h2>
+        <p>By the afternoon Rex had company: a wolf, a fox, a cat, a lion, a horse, a cow, a pig, a sheep, a bear, a deer and a goat. Every one of them came with a skeleton, ears that twitch, a tail that wags and four ways of moving: an idle fidget, a walk, a trot and a gallop. There's also an "eat" move, which mostly means putting their face on the floor.</p>
+        <p>We are proud to report that the walk uses the real order animals put their feet down in, and that the feet stay planted on the ground instead of ice-skating. We are less proud to report that the sheep is, structurally, a cloud with legs. We have made peace with this. So has the sheep.</p>
+      </article>
+
+      <div class="day"><span class="badge">DAY 2</span><hr /></div>
+
+      <article class="entry">
+        <div class="time">MORNING · EXPANSION WING</div>
+        <h2>"Real world creatures and some fantasy. Mounts included, maybe."</h2>
+        <p>Tom said this the way other people order a coffee. By evening the sanctuary had an elephant, a giraffe, a rhino, a hippo, a camel, a crocodile, a panda and more. It also had a dragon, a griffin, a pegasus, a unicorn, an owlbear (we don't ask), a hellhound with lava for skin and a kirin who glows slightly when complimented.</p>
+        <p>Some of the newcomers needed adjustments on arrival:</p>
+        <ul class="bloopers">
+          <li data-e="🐘"><b>Nelly the elephant dragged her nose along the floor.</b> Her trunk was simply longer than she was tall. <em>New shelter rule: no nose touches the floor. Trunks now curl until they clear the ground, whatever length they're born with.</em></li>
+          <li data-e="🦛"><b>Gloria the hippo was partially underground.</b> Her belly hung below her own feet, like a very confident submarine. <em>Longer legs, smaller belly, dignity restored.</em></li>
+          <li data-e="🐉"><b>Ember the dragon's horns pointed straight up</b>, like she was trying to pick up a radio station. <em>They now sweep back, as is traditional for creatures that hoard gold.</em></li>
+          <li data-e="🐊"><b>The crocodiles walked like dogs.</b> <em>They now wriggle properly, with that sideways S-shaped swagger lizards are known for.</em></li>
+        </ul>
+      </article>
+
+      <article class="entry">
+        <div class="time">AFTERNOON · THE TACK ROOM</div>
+        <h2>Some residents found jobs</h2>
+        <p>Several residents expressed interest in a career in transport. We now offer saddles, blankets, stirrups, bridles, reins and full suits of armour. The tack room has one trick: every saddle is made from the animal itself, a thin shell traced over its own back. So the same saddle that fits a horse also fits a camel, a griffin, a dragon or a war boar the size of a small car.</p>
+        <figure>
+          <img src="./devlog/mounts.webp" alt="Four mounts: a riding horse with saddle and bridle, a war elephant in leather armour, a griffin with a saddle, and a huge war boar in leather barding" loading="lazy" />
+          <figcaption>Left to right: Biscuit (commuter), Hannibal (security), Skyfang (express delivery), Gutripper (we don't talk about Gutripper).</figcaption>
+        </figure>
+        <p>There were incidents. Biscuit the riding horse wore his first set of reins <em>straight through his neck</em>. He did not complain, which was honestly the most frightening part. Reins now drape over the neck like a normal horse's.</p>
+        <p>Then the war elephant received his armour, and his neck guard turned into what can only be described as a hoodie. He looked like he was about to drop a mixtape. Elephants, it turns out, don't have enough neck for neck armour. The tack room now checks for neck before fitting.</p>
+        <figure>
+          <img src="./devlog/hood.webp" alt="An early war elephant wearing red leather armour that bunches around its head like a hood" loading="lazy" />
+          <figcaption>Exhibit A: the Hoodie Era. He was very cool and very uncomfortable.</figcaption>
+        </figure>
+      </article>
+
+      <div class="day"><span class="badge">DAY 3</span><hr /></div>
+
+      <article class="entry">
+        <div class="time">MORNING · THERAPY ROOM</div>
+        <h2>Marmalade has seen things</h2>
+        <p>Tom came in with his coffee, looked at the cat enclosure and said: <em>"Cat looks like he's seen some serious horrors."</em></p>
+        <p>He was right. Marmalade, our orange tabby, had huge glassy eyes bulging out of her head and the expression of someone who once watched a vacuum cleaner eat a sock. We started treatment immediately. Smaller eyes, set deeper. A bit more neck, so her head stopped sitting directly on her shoulders. Slightly longer legs.</p>
+        <p>Then, as part of a general glow-up, we gave all the residents eyeliner, and that made it so much worse. The eyeliner was mixed from each animal's nose colour, and a cat's nose is pink. Marmalade now had pink-rimmed eyes and looked like she hadn't slept since 2019. Eyeliner is now mixed from a darker shade of the animal's own coat. Marmalade is doing much better. She still flinches at the sound of the word "subdivision".</p>
+        <figure>
+          <img src="./devlog/cat.webp" alt="Before: an orange cat with huge bulging green eyes. After: the same cat with smaller, well-set eyes and dark eyeliner, looking calm" loading="lazy" />
+          <figcaption>Same cat, three sessions apart. The therapist asked not to be named.</figcaption>
+        </figure>
+      </article>
+
+      <article class="entry">
+        <div class="time">AFTERNOON · THE GYM</div>
+        <h2>Ember skipped leg day (for several centuries)</h2>
+        <p>Tom's second observation of the morning: <em>"I think the dragon forgot about leg day."</em> Ember had the upper body of a fantasy apex predator and the legs of a coffee table. Physiotherapy was intense: thicker legs, longer legs, bigger shoulders and serious haunches. She now stands like something that has burned at least one village, which is the look we were going for.</p>
+        <figure>
+          <img src="./devlog/dragon.webp" alt="Before: a red dragon with short thin legs. After: the same dragon standing tall on thick, muscular legs" loading="lazy" />
+          <figcaption>Ember has asked us to stop showing the "before" picture. We have declined.</figcaption>
+        </figure>
+      </article>
+
+      <article class="entry">
+        <div class="time">EVENING · THE TATTOO PARLOUR</div>
+        <h2>Tattoos, not surgery</h2>
+        <p>Until now, every stripe, spot and nostril had been <em>built</em> into the animals. A tiger's stripes were triangles painted one flat colour each, like decorating a house with a paint roller. Nostrils were drilled into noses.</p>
+        <p>Tom pointed out that details can live in the paint, not the body. So the sanctuary opened a tattoo parlour. Every resident now gets a hand-fitted coat painted onto a flat "skin map": soft bellies that fade into their backs, crisp stripes, real leopard rosettes, giraffe patches and dragon scales. Eyes now have proper irises with a little glint of light in them. Nobody's nose gets drilled anymore. Nostrils are painted on, and so are mouths, toe lines and eyeliner (the dark kind).</p>
+        <figure>
+          <img src="./devlog/tattoos.webp" alt="Before: a tiger, leopard, zebra and crocodile coloured in flat blocky triangles. After: the same animals with soft, detailed painted coats" loading="lazy" />
+          <figcaption>Top: the paint-roller years. Bottom: professional ink.</figcaption>
+        </figure>
+      </article>
+
+      <div class="day"><span class="badge">DAY 4</span><hr /></div>
+
+      <article class="entry">
+        <div class="time">MORNING · THE CAFETERIA</div>
+        <h2>The Great Polygon Diet</h2>
+        <p>Tom walked in, looked at the residents and said four words: <em>"Way too many polygons."</em></p>
+        <p>A low-poly animal is made of flat triangles, and every triangle is something a game has to carry around. Our residents had been carrying about three thousand each. The whole sanctuary went on a strict diet: twelve hundred by default, and three hundred for the truly committed.</p>
+        <p>The surprise: thanks to the tattoos, you can barely tell. The stripes, the saddle markings and the eyes are all paint now, so the triangles only have to hold the shape. The dog at three hundred triangles is still very much a dog. He is also a lot faster.</p>
+        <figure>
+          <img src="./devlog/diet.webp" alt="The same dog shown in wireframe at three thousand, twelve hundred and three hundred triangles" loading="lazy" />
+          <figcaption>Rex, before and after the diet. He'd like you to know he feels great.</figcaption>
+        </figure>
+        <div class="chart"><b>Diet side effect, filed by the night keeper</b>Shrinking the triangles kept nibbling the tips off everyone's ears, like a tiny ear goblin. Tips of ears, horns and toes are now pinned in place and protected by shelter policy.</div>
+      </article>
+
+      <article class="entry">
+        <div class="time">AFTERNOON · THE BACK END</div>
+        <h2>The Bubble Butt Incident</h2>
+        <p>The diet revealed a second problem. Tom, with the calm of a man who has seen a lot of procedurally generated rear ends: <em>"And animals have too bubbly butts."</em></p>
+        <p>He wasn't wrong. Every resident's hindquarters were built from two big round thigh-balloons pushed out behind the hips, so from behind the whole shelter looked like a queue for a balloon-animal convention. Thighs have been reassigned from balloons to actual thighs: long along the leg, deep front to back, flat at the sides. The rump now slopes gently into the tail instead of ballooning out behind it.</p>
+        <figure>
+          <img src="./devlog/butts.webp" alt="A horse and a lion from behind, before and after: before, round bubble-shaped hindquarters; after, flatter, more natural thighs" loading="lazy" />
+          <figcaption>We considered blurring this image. We did not.</figcaption>
+        </figure>
+      </article>
+
+      <div class="day" id="rules"><span class="badge">SHELTER RULES</span><hr /></div>
+
+      <article class="entry">
+        <h2>Posted on the fridge</h2>
+        <ul class="bloopers">
+          <li data-e="🧱"><b>No sausages.</b> <em>Every animal is sculpted in one piece, never glued together from tubes.</em></li>
+          <li data-e="👃"><b>No nose touches the floor.</b> <em>Trunks curl, hippos stand up straight.</em></li>
+          <li data-e="🍑"><b>No bubble butts.</b> <em>Thighs are thighs.</em></li>
+          <li data-e="👁️"><b>No pink eyeliner.</b> <em>Eyeliner is a darker version of your own coat.</em></li>
+          <li data-e="🥗"><b>Twelve hundred triangles, three hundred on fasting days.</b> <em>Details go in the tattoos.</em></li>
+          <li data-e="🦵"><b>Nobody skips leg day.</b> <em>Looking at you, Ember.</em></li>
+          <li data-e="🔀"><b>Cross-breeding is allowed and encouraged.</b> <em>There is a slider for it. The horse-cow is called Clover and she's lovely.</em></li>
+          <li data-e="🕷️"><b>No spiders.</b> <em>Noor, our enrichment coordinator, files a new request every week. It is lovingly denied every week. We admire the persistence.</em></li>
+        </ul>
+      </article>
+
+      <article class="entry">
+        <h2>The scoreboard</h2>
+        <div class="score">
+          <span>Residents (real, fantasy and employed)</span><span>46</span>
+          <span>Body parts available per animal</span><span>~70 sliders</span>
+          <span>Ways to move</span><span>5 (+ flying, if you have wings)</span>
+          <span>Triangles per resident, before the diet</span><span>~3,000</span>
+          <span>Triangles per resident, after the diet</span><span>1,200 (or 300)</span>
+          <span>Cats in therapy</span><span>1 (improving)</span>
+          <span>Dragons who skipped leg day</span><span>0 (now)</span>
+          <span>Bubble butts</span><span>0 (since lunch)</span>
+          <span>Spiders</span><span>0 (pending forever)</span>
+        </div>
+        <p style="margin-top:14px">Adoption is free. Every resident leaves with a skeleton, its own moves, a painted coat and, if it asks nicely, a saddle. <a href="./index.html">Come and meet them.</a></p>
+      </article>
+    </main>
+
+    <footer class="end">
+      <div class="motto">Bad Ideas Works</div>
+      Where bad ideas receive suspiciously serious engineering.<br />
+      No animals were harmed. Several were remeshed.
+    </footer>
+  </body>
+</html>
