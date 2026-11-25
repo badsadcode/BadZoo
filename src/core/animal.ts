@@ -12,9 +12,11 @@ import type { Grid } from './sdf';
 import { hexRgb, jitter, LOCKED_REGIONS, paintFacet, PaintContext, RGB, srgbToLinear } from './paint';
 import type { AnimalRecipe } from './recipe';
 import { Region, sampleGrid } from './sdf';
-import { owner, skinVertex } from './skin';
+import { owner, ownerIndex, skinVertex } from './skin';
 import { buildTack } from './tack';
-import { buildWings } from './wings';
+import { buildWings, Sheet } from './wings';
+import { bakeTexture, Texture } from './texture';
+import { unwrap, Unwrap } from './uv';
 
 export interface MeshOut {
   positions: Float32Array;
@@ -24,6 +26,8 @@ export interface MeshOut {
   joints: Uint8Array;
   weights: Float32Array;
   indices: Uint32Array;
+  /** texture coordinates (textured mode) */
+  uvs?: Float32Array;
 }
 
 export interface Animal {
@@ -31,12 +35,16 @@ export interface Animal {
   anatomy: Anatomy;
   body: MeshOut;
   eyes: MeshOut;
+  /** wing sheets as their own vertex-coloured primitive (textured mode; merged into body otherwise) */
+  wings: MeshOut | null;
+  /** baked colour atlas (textured mode) */
+  texture: Texture | null;
   /** riding gear, split by material */
   tack: MeshOut | null;
   metal: MeshOut | null;
   tackPieces: string[];
   clips: Clip[];
-  stats: { tris: number; bodyTris: number; verts: number; sculptTris: number; shapes: number; ms: number; height: number; length: number };
+  stats: { stages: Record<string, number>; tris: number; bodyTris: number; verts: number; sculptTris: number; shapes: number; ms: number; height: number; length: number };
 }
 
 /** extra decimation budget for the parts people look at */
@@ -50,7 +58,7 @@ const IMPORTANCE: Partial<Record<Region, number>> = {
  *  - finer on tight curves (ear tips, horns, toes), via the field's curvature
  *  - extra edge loops around joints, so elbows and knees have geometry to bend with
  */
-function sizeField(a: Anatomy, g: Grid, dense: TriMesh, target: number, rc: AnimalRecipe) {
+function sizeField(a: Anatomy, g: Grid, dense: TriMesh, target: number, rc: AnimalRecipe, own: (p: V3) => { prim: { region: Region } }) {
   let area = 0;
   for (let i = 0; i < dense.tri.length; i += 3) {
     const [p, q, r] = [0, 1, 2].map((k) => v3(dense.pos, dense.tri[i + k]));
@@ -69,7 +77,7 @@ function sizeField(a: Anatomy, g: Grid, dense: TriMesh, target: number, rc: Anim
         const p: V3 = [g.origin[0] + x * cs, g.origin[1] + y * cs, g.origin[2] + z * cs];
         const d = gridSampleSafe(g, p);
         if (Math.abs(d) > cs * 1.8) continue;
-        imp[(z * dims[1] + y) * dims[0] + x] = IMPORTANCE[owner(a.prims, p).prim.region] ?? 1;
+        imp[(z * dims[1] + y) * dims[0] + x] = IMPORTANCE[own(p).prim.region] ?? 1;
       }
   const impAt = (x: number, y: number, z: number) => {
     const ix = Math.max(0, Math.min(dims[0] - 1, Math.round((x - g.origin[0]) / cs)));
@@ -124,6 +132,13 @@ function extent(a: Anatomy): number {
 
 export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {}): Animal {
   const t0 = performance.now();
+  const stages: Record<string, number> = {};
+  let tl = t0;
+  const lap = (k: string) => {
+    const n = performance.now();
+    stages[k] = Math.round(n - tl);
+    tl = n;
+  };
   const res = Math.max(40, Math.min(320, rc.mesh.resolution));
   // pass 1 to measure, pass 2 with the real grid spacing (thin parts are thickened to ≥ 2.6 cells)
   let hU = 0.008;
@@ -140,15 +155,18 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
   if (signedVolume(dense) < 0) flipWinding(dense);
   relax(dense, 2);
   const sculptTris = dense.tri.length / 3;
+  lap('sculpt');
 
   // ── importance-weighted decimation
   const nD = dense.pos.length / 3;
   const imp = new Float64Array(nD);
-  for (let i = 0; i < nD; i++) imp[i] = IMPORTANCE[owner(prims, v3(dense.pos, i)).prim.region] ?? 1;
+  const own = ownerIndex(prims);
+  for (let i = 0; i < nD; i++) imp[i] = IMPORTANCE[own(v3(dense.pos, i)).prim.region] ?? 1;
   const target = Math.max(300, rc.mesh.tris);
   let low = decimate(dense, { targetTris: Math.round(target * 1.6), weight: imp });
-  if (rc.mesh.topology === 'remesh') low = remesh(low, grid, { targetTris: target, sizeAt: sizeField(anat, grid, dense, target, rc), iterations: 6 });
+  if (rc.mesh.topology === 'remesh') low = remesh(low, grid, { targetTris: target, sizeAt: sizeField(anat, grid, dense, target, rc, own), iterations: 6 });
 
+  lap('topology');
   // ── skin + paint
   const size = anat.dims.withers;
   const ctx: PaintContext = { rc, size, withers: anat.dims.withers, eyes: anat.eyes };
@@ -157,7 +175,18 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
   const nT = low.tri.length / 3;
 
   let body: MeshOut;
-  if (rc.mesh.shading === 'flat') {
+  let texture: Texture | null = null;
+  let uw: Unwrap | null = null;
+  if (rc.mesh.texture > 0) {
+    // ── textured: unwrap, bake, then build the mesh with UVs
+    const S = rc.mesh.texture;
+    lap('skin');
+    uw = unwrap(low, skin, anat, { texSize: S, slots: anat.eyes.length });
+    lap('unwrap');
+    texture = bakeTexture(low, uw, anat, grid, ctx, S);
+    lap('bake');
+    body = texturedMesh(low, skin, uw, rc.mesh.shading === 'flat', grid);
+  } else if (rc.mesh.shading === 'flat') {
     // paint every facet, then clean up the pattern edges, then unweld (3 vertices per facet)
     const faceN: V3[] = [];
     const faceCol: RGB[] = [];
@@ -218,10 +247,13 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
 
   // ── wing sheets join the coat primitive (same material, explicit flat facets)
   const sheet = buildWings(anat, rc);
-  if (sheet) body = mergeMesh(body, sheet);
+  let wings: MeshOut | null = null;
+  if (sheet && texture) wings = sheetMesh(sheet);
+  else if (sheet) body = mergeMesh(body, sheet);
   const tackOut = rc.tack.saddle || rc.tack.bridle || rc.tack.blanket || rc.tack.barding !== 'none' ? buildTack(anat, rc, h) : { tack: null, metal: null, pieces: [] };
 
-  const eyes = eyeMesh(anat, rc);
+  const eyes = eyeMesh(anat, rc, uw?.slots);
+  lap('extras');
   const clips = opts.clips === false ? [] : buildClips(anat, rc);
   let height = 0;
   for (let i = 1; i < body.positions.length; i += 3) height = Math.max(height, body.positions[i]);
@@ -236,11 +268,13 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
     anatomy: anat,
     body,
     eyes,
+    wings,
+    texture,
     tack: tackOut.tack,
     metal: tackOut.metal,
     tackPieces: tackOut.pieces,
     clips,
-    stats: { bodyTris: nT, tris: body.indices.length / 3 + eyes.indices.length / 3 + ((tackOut.tack?.indices.length ?? 0) + (tackOut.metal?.indices.length ?? 0)) / 3, verts: body.positions.length / 3, sculptTris, shapes: prims.length, ms: performance.now() - t0, height, length: zmax - zmin },
+    stats: { stages, bodyTris: nT, tris: body.indices.length / 3 + eyes.indices.length / 3 + (wings ? wings.indices.length / 3 : 0) + ((tackOut.tack?.indices.length ?? 0) + (tackOut.metal?.indices.length ?? 0)) / 3, verts: body.positions.length / 3, sculptTris, shapes: prims.length, ms: performance.now() - t0, height, length: zmax - zmin },
   };
 }
 
@@ -284,6 +318,77 @@ function smoothLabels(m: TriMesh, col: RGB[], locked: boolean[], iters: number) 
   }
 }
 
+/** Body mesh with UVs: unwelded per facet (flat) or welded with seams split per chart (smooth). */
+function texturedMesh(low: TriMesh, skin: [number, number][][], uw: Unwrap, flat: boolean, g: Grid): MeshOut {
+  const nT = low.tri.length / 3;
+  const P: number[] = [];
+  const N: number[] = [];
+  const UV: number[] = [];
+  const J: number[] = [];
+  const Wt: number[] = [];
+  const idx: number[] = [];
+  const pushV = (vi: number, n: V3, u: number, v: number) => {
+    P.push(low.pos[vi * 3], low.pos[vi * 3 + 1], low.pos[vi * 3 + 2]);
+    N.push(...n);
+    UV.push(u, v);
+    const w = skin[vi];
+    for (let k = 0; k < 4; k++) {
+      J.push(w[k]?.[0] ?? 0);
+      Wt.push(w[k]?.[1] ?? (k === 0 && !w.length ? 1 : 0));
+    }
+    return P.length / 3 - 1;
+  };
+  if (flat) {
+    for (let t = 0; t < nT; t++) {
+      const ids = [low.tri[t * 3], low.tri[t * 3 + 1], low.tri[t * 3 + 2]];
+      const [a, b, c] = ids.map((i) => v3(low.pos, i));
+      const n = norm(cross(sub(b, a), sub(c, a)));
+      ids.forEach((vi, k) => idx.push(pushV(vi, n, uw.cornerUV[t * 6 + k * 2], uw.cornerUV[t * 6 + k * 2 + 1])));
+    }
+  } else {
+    const nVn = new Float64Array(low.pos.length);
+    for (let t = 0; t < nT; t++) {
+      const ids = [low.tri[t * 3], low.tri[t * 3 + 1], low.tri[t * 3 + 2]];
+      const [a, b, c] = ids.map((i) => v3(low.pos, i));
+      const n = cross(sub(b, a), sub(c, a));
+      for (const i of ids) for (let k = 0; k < 3; k++) nVn[i * 3 + k] += n[k];
+    }
+    void g;
+    const map = new Map<string, number>();
+    for (let t = 0; t < nT; t++)
+      for (let k = 0; k < 3; k++) {
+        const vi = low.tri[t * 3 + k];
+        const key = `${vi}:${uw.chartOf[t]}`;
+        let o = map.get(key);
+        if (o === undefined) {
+          o = pushV(vi, norm(v3(nVn, vi)), uw.cornerUV[t * 6 + k * 2], uw.cornerUV[t * 6 + k * 2 + 1]);
+          map.set(key, o);
+        }
+        idx.push(o);
+      }
+  }
+  return {
+    positions: Float32Array.from(P),
+    normals: Float32Array.from(N),
+    colors: new Float32Array(P.length).fill(1),
+    joints: Uint8Array.from(J),
+    weights: Float32Array.from(Wt),
+    indices: Uint32Array.from(idx),
+    uvs: Float32Array.from(UV),
+  };
+}
+
+function sheetMesh(s: Sheet): MeshOut {
+  return {
+    positions: Float32Array.from(s.pos),
+    normals: Float32Array.from(s.nrm),
+    colors: Float32Array.from(s.col),
+    joints: Uint8Array.from(s.joints),
+    weights: Float32Array.from(s.weights),
+    indices: Uint32Array.from({ length: s.pos.length / 3 }, (_, i) => i),
+  };
+}
+
 function mergeMesh(m: MeshOut, s: { pos: number[]; nrm: number[]; col: number[]; joints: number[]; weights: number[] }): MeshOut {
   const n0 = m.positions.length / 3;
   const n1 = s.pos.length / 3;
@@ -307,6 +412,46 @@ function mergeMesh(m: MeshOut, s: { pos: number[]; nrm: number[]; col: number[];
 }
 
 // ───────────────────────────────────────────────────────────── eyes ──
+
+/** textured eyes: a smooth 80-triangle ball, iris painted in the atlas (front-facing projection) */
+function eyeMeshTextured(a: Anatomy, slots: [number, number, number][]): MeshOut {
+  const ico = icosphere(1);
+  const P: number[] = [];
+  const N: number[] = [];
+  const UV: number[] = [];
+  const J: number[] = [];
+  const Wt: number[] = [];
+  const I: number[] = [];
+  a.eyes.forEach((e, ei) => {
+    const z = e.look;
+    const x = norm(cross([0, 1, 0], z));
+    const y = cross(z, x);
+    const [u0, v0, sz] = slots[ei];
+    const base = P.length / 3;
+    for (const d of ico.pos) {
+      P.push(e.c[0] + d[0] * e.r, e.c[1] + d[1] * e.r, e.c[2] + d[2] * e.r);
+      N.push(...d);
+      const lx = d[0] * x[0] + d[1] * x[1] + d[2] * x[2];
+      const ly = d[0] * y[0] + d[1] * y[1] + d[2] * y[2];
+      const lz = d[0] * z[0] + d[1] * z[1] + d[2] * z[2];
+      // the back of the eye collapses to the slot's edge (sclera colour); never seen anyway
+      const k = lz >= 0 ? 0.98 : 0.98 / Math.max(1e-3, Math.hypot(lx, ly));
+      UV.push(u0 + sz * (0.5 + 0.5 * lx * k), v0 + sz * (0.5 - 0.5 * ly * k));
+      J.push(e.bone, 0, 0, 0);
+      Wt.push(1, 0, 0, 0);
+    }
+    for (const t of ico.tri) I.push(base + t);
+  });
+  return {
+    positions: Float32Array.from(P),
+    normals: Float32Array.from(N),
+    colors: new Float32Array(P.length).fill(1),
+    joints: Uint8Array.from(J),
+    weights: Float32Array.from(Wt),
+    indices: Uint32Array.from(I),
+    uvs: Float32Array.from(UV),
+  };
+}
 
 function icosphere(sub: number): { pos: V3[]; tri: number[] } {
   const t = (1 + Math.sqrt(5)) / 2;
@@ -340,7 +485,8 @@ function icosphere(sub: number): { pos: V3[]; tri: number[] } {
   return { pos, tri };
 }
 
-function eyeMesh(a: Anatomy, rc: AnimalRecipe): MeshOut {
+function eyeMesh(a: Anatomy, rc: AnimalRecipe, slots?: [number, number, number][]): MeshOut {
+  if (slots) return eyeMeshTextured(a, slots);
   const ico = icosphere(2);
   const P: number[] = [];
   const N: number[] = [];

@@ -98,6 +98,8 @@ export interface Anatomy {
   eyes: Eye[];
   legs: Leg[];
   wings: Wing[];
+  /** small painted features (texture mode): nostrils */
+  marks: { kind: 'nostril'; c: V3; r: number }[];
   /** useful measurements for animation & UI */
   dims: { withers: number; length: number; legFront: number; legHind: number; headTip: V3; tailTip: V3; earTips: V3[]; saddle: V3 };
 }
@@ -716,13 +718,16 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     const look = norm(add(add(scale(f, Math.cos(a)), [sx * Math.sin(a), 0, 0]), scale(uh, 0.12)));
     const origin = at(C, sx * hs * 0.25, hs * 0.18, hs * 0.48);
     const surf = surfaceAlong(origin, look, faceSet.filter((p) => p.region !== 'mane'));
-    eyes.push({ bone: index.Head, c: sub(surf, scale(look, Ey.size * 0.5)), r: Ey.size, look });
+    eyes.push({ bone: index.Head, c: sub(surf, scale(look, Ey.size * 0.6)), r: Ey.size, look });
     // a shallow socket so the eye sits in the head instead of on it
     prims.push({ kind: 'ell', region: 'head', sub: true, c: sub(surf, scale(look, Ey.size * 0.15)), ax: frame(look), r: [Ey.size * 1.05, Ey.size * 0.85, Ey.size * 0.6], k: Ey.size * 0.5, wa: head });
   }
-  // nostrils
+  // nostrils: painted when the animal is textured, carved when it's facet-coloured
+  const marks: Anatomy['marks'] = [];
   for (const c of nostrils) {
     const r = tipR * 0.16 * ns + h * 0.4;
+    marks.push({ kind: 'nostril', c, r: r * 0.75 });
+    if (rc.mesh.texture > 0) continue;
     prims.push({ kind: 'ell', region: 'nose', sub: true, c, ax: frame(f, uh), r: [r, r * 0.8, r * 1.5], k: r * 0.6, wa: head });
   }
 
@@ -741,6 +746,7 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     } else p.c = shift(p.c);
   }
   for (const e of eyes) e.c = shift(e.c);
+  for (const k of marks) k.c = shift(k.c);
   for (const l of legs) l.tip = shift(l.tip);
   for (const w of wings) {
     w.joints = w.joints.map(shift);
@@ -757,6 +763,7 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     eyes,
     legs,
     wings,
+    marks,
     dims: {
       withers: yW + dy,
       length: L,
@@ -791,6 +798,10 @@ export function scaleAnatomy(a: Anatomy, s: number) {
   for (const e of a.eyes) {
     e.c = S(e.c);
     e.r *= s;
+  }
+  for (const k of a.marks) {
+    k.c = S(k.c);
+    k.r *= s;
   }
   for (const l of a.legs) l.tip = S(l.tip);
   for (const w of a.wings) {

@@ -3,7 +3,7 @@
  */
 import type { V3 } from './math';
 import type { Owner } from './paint';
-import { Prim, primDist } from './sdf';
+import { Prim, primBounds, primDist } from './sdf';
 
 export function owner(prims: Prim[], p: V3): Owner {
   let best = Infinity;
@@ -72,3 +72,37 @@ export function bindingAt(pr: Prim, t: number): [number, number][] {
   return blend(pr.wa, pr.wb, t);
 }
 
+
+/**
+ * A coarse spatial index over the sculpt's shapes, so "who owns this point" checks the handful of
+ * shapes nearby instead of all of them (50k dense vertices × 100 shapes adds up).
+ */
+export function ownerIndex(prims: Prim[], cells = 20): (p: V3) => Owner {
+  const add = prims.filter((p) => !p.sub);
+  const bs = add.map(primBounds);
+  const mn: V3 = [Infinity, Infinity, Infinity];
+  const mx: V3 = [-Infinity, -Infinity, -Infinity];
+  bs.forEach((b, i) => {
+    for (let k = 0; k < 3; k++) {
+      mn[k] = Math.min(mn[k], b.min[k] - add[i].k);
+      mx[k] = Math.max(mx[k], b.max[k] + add[i].k);
+    }
+  });
+  const cs = Math.max(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) / cells;
+  const dims = [0, 1, 2].map((k) => Math.max(1, Math.ceil((mx[k] - mn[k]) / cs)));
+  const bins: Prim[][] = Array.from({ length: dims[0] * dims[1] * dims[2] }, () => []);
+  const cell = (v: number, k: number) => Math.max(0, Math.min(dims[k] - 1, Math.floor((v - mn[k]) / cs)));
+  // a shape belongs to every cell its (blend-padded) bounds touch, plus a margin so the nearest
+  // shape is always among a cell's candidates for points close to the surface
+  add.forEach((p, i) => {
+    const pad = p.k + cs * 0.75;
+    const b = bs[i];
+    for (let z = cell(b.min[2] - pad, 2); z <= cell(b.max[2] + pad, 2); z++)
+      for (let y = cell(b.min[1] - pad, 1); y <= cell(b.max[1] + pad, 1); y++)
+        for (let x = cell(b.min[0] - pad, 0); x <= cell(b.max[0] + pad, 0); x++) bins[(z * dims[1] + y) * dims[0] + x].push(p);
+  });
+  return (p: V3) => {
+    const list = bins[(cell(p[2], 2) * dims[1] + cell(p[1], 1)) * dims[0] + cell(p[0], 0)];
+    return owner(list.length ? list : add, p);
+  };
+}

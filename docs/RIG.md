@@ -58,7 +58,7 @@ Plain child nodes (not skin joints), tagged `extras.badzoo.socket`:
 
 ## Materials
 
-`Coat` (vertex colours), `Eyes` (glossy; emissive when `eyes.glow`), and when tack is present
+`Coat` (baked atlas via `TEXCOORD_0`, or vertex colours in facet mode), `Eyes` (same atlas; glossy; emissive when `eyes.glow`), `Wings` (vertex colours, textured mode only), and when tack is present
 `Tack` (leather / cloth) and `Metal` (plate, stirrups; metallic 0.85).
 
 ## Extras

@@ -9,7 +9,7 @@ import { sampleGrid } from '../src/core/sdf';
 import { blendRecipes, presetRecipe, randomRecipe, SPECIES } from '../src/core/species';
 import { exportGlb } from '../src/export/gltf';
 
-const FAST = { tris: 1500, resolution: 90 } as const;
+const FAST = { tris: 1500, resolution: 90, texture: 256 } as const;
 const quick = (sp: string, seed = 1) => {
   const rc = presetRecipe(sp, seed);
   rc.mesh = { ...rc.mesh, ...FAST };
@@ -82,6 +82,13 @@ describe.each(Object.keys(SPECIES))('%s', (sp) => {
     }
   });
 
+  it('is unwrapped and textured', () => {
+    expect(an.texture?.size).toBe(256);
+    expect(an.body.uvs!.length / 2).toBe(an.body.positions.length / 3);
+    for (const u of an.body.uvs!) expect(u >= 0 && u <= 1).toBe(true);
+    expect(an.eyes.uvs).toBeDefined();
+  });
+
   it('has the features its recipe asks for', () => {
     const rc = an.recipe;
     expect(an.clips.some((c) => c.name === 'Fly')).toBe(rc.wings.kind !== 'none');
@@ -101,6 +108,29 @@ describe.each(Object.keys(SPECIES))('%s', (sp) => {
     expect(json.nodes.some((n: { name: string }) => n.name === 'Socket_Saddle')).toBe(true);
     if (report.issues.numErrors) console.log(JSON.stringify(report.issues.messages.slice(0, 5), null, 1));
     expect(report.issues.numErrors).toBe(0);
+  });
+});
+
+describe('topology', () => {
+  it('remeshes to a closed manifold close to the budget', async () => {
+    const { remesh } = await import('../src/core/remesh');
+    const prims = [
+      { kind: 'ell' as const, region: 'body' as const, c: [0, 0, 0] as [number, number, number], ax: [[1, 0, 0], [0, 1, 0], [0, 0, 1]] as [[number, number, number], [number, number, number], [number, number, number]], r: [0.5, 0.3, 0.4] as [number, number, number], k: 0.1, wa: [] },
+    ];
+    const g = sampleGrid(prims, 0.02);
+    const m = surfaceNets(g);
+    if (signedVolume(m) < 0) flipWinding(m);
+    const r = remesh(decimate(m, { targetTris: 1600 }), g, { targetTris: 1000, sizeAt: () => 1 });
+    expect(edgeUse(r.tri).every((n) => n === 2)).toBe(true);
+    expect(r.tri.length / 3).toBeGreaterThan(700);
+    expect(r.tri.length / 3).toBeLessThan(1400);
+  });
+  it('facet-colour mode still works', () => {
+    const rc = quick('fox');
+    rc.mesh.texture = 0;
+    const an = generateAnimal(rc, { clips: false });
+    expect(an.texture).toBeNull();
+    expect(an.body.uvs).toBeUndefined();
   });
 });
 

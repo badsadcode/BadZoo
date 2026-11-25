@@ -188,6 +188,8 @@ export interface AnimalRecipe {
     shading: 'flat' | 'smooth';
     /** 'remesh' = even, joint-aware triangles; 'decimate' = raw quadric decimation */
     topology: 'remesh' | 'decimate';
+    /** baked colour texture size (0 = per-facet vertex colours instead) */
+    texture: number;
     /** sculpt sampling resolution (cells along the longest axis) */
     resolution: number;
   };
@@ -249,5 +251,5 @@ export const BASE: AnimalRecipe = {
     wool: 0,
     jitter: 0.35,
   },
-  mesh: { tris: 3000, shading: 'flat', topology: 'remesh', resolution: 150 },
+  mesh: { tris: 3000, shading: 'flat', topology: 'remesh', texture: 1024, resolution: 150 },
 };

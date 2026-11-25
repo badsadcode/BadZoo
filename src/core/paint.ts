@@ -85,12 +85,22 @@ export interface Owner {
   u: number;
 }
 
-export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner): RGB {
+/**
+ * Paint one point of the coat. `soft` = transition half-width: 0 for facet colours (hard edges,
+ * classic low-poly), > 0 when baking a texture (smooth countershading, anti-aliased stripes).
+ */
+export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner, soft = 0): RGB {
   const { rc } = ctx;
   const C = rc.coat;
   const reg = o.prim.region;
-  const base = hexRgb(C.base);
-  let col = base;
+  let col = hexRgb(C.base);
+  /** 0 → 1 as x rises past edge (hard step when soft = 0) */
+  const st = (x: number, edge: number, w = 1) => {
+    const sw = soft * w;
+    if (sw <= 0) return x > edge ? 1 : 0;
+    const t = clamp((x - edge + sw) / (2 * sw));
+    return t * t * (3 - 2 * t);
+  };
 
   const pat = hexRgb(C.patternColor);
   const q: V3 = [p[0] / ctx.size, p[1] / ctx.size, p[2] / ctx.size];
@@ -98,29 +108,28 @@ export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner): RGB {
   const amt = C.patternAmount;
   const furry = !['nose', 'hoof', 'horn', 'earInner', 'beak', 'spine', 'wing'].includes(reg);
   const isLeg = reg === 'leg' || reg === 'lowerLeg' || reg === 'paw';
+  const csThr = lerp(-0.85, 0.35, C.countershade);
 
-  // ── countershading (lighter underneath)
+  // ── countershading (lighter underneath); a wide, soft gradient when baking
   if (furry && reg !== 'tail' && reg !== 'tailTip' && reg !== 'ear' && C.countershade > 0) {
-    const thr = lerp(-0.85, 0.35, C.countershade);
-    let under = n[1] < thr;
-    if (reg === 'head' || reg === 'brow') under = n[1] < thr - 0.25;
-    if (under) col = hexRgb(C.belly);
+    const thr = reg === 'head' || reg === 'brow' ? csThr - 0.25 : csThr;
+    col = mix(col, hexRgb(C.belly), 1 - st(n[1], thr, 4));
   }
 
   // ── pattern
   if (furry && reg !== 'tailTip') {
-    let on = false;
+    let on = 0;
     switch (C.pattern) {
       case 'spots': {
         const w = worley([q[0] * 7 * fs, q[1] * 7 * fs, q[2] * 7 * fs], rc.seed);
-        on = w < 0.18 + 0.22 * amt;
+        on = 1 - st(w, 0.18 + 0.22 * amt, 0.3);
         break;
       }
       case 'rosettes': {
         const w = worley([q[0] * 6 * fs, q[1] * 6 * fs, q[2] * 6 * fs], rc.seed);
-        on = w > 0.2 && w < 0.2 + 0.16 * (0.5 + amt);
-        if (w <= 0.2 && amt > 0.3) col = mix(col, pat, 0.22);
-        if (n[1] < -0.3) on = on && amt > 0.6;
+        on = st(w, 0.2, 0.25) * (1 - st(w, 0.2 + 0.16 * (0.5 + amt), 0.25));
+        if (amt > 0.3) col = mix(col, pat, 0.22 * (1 - st(w, 0.2, 0.25)));
+        if (n[1] < -0.3 && amt <= 0.6) on = 0;
         break;
       }
       case 'stripes':
@@ -129,73 +138,69 @@ export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner): RGB {
         const coord = isLeg || reg === 'tail' ? q[1] * 1.3 + q[2] * 0.4 : q[2] + Math.abs(q[0]) * 0.25 + q[1] * 0.15;
         const sv = Math.sin((coord * (C.pattern === 'tabby' ? 12 : 9) * fs + warp * (C.pattern === 'tabby' ? 0.6 : 1)) * Math.PI);
         const width = C.pattern === 'tabby' ? 0.25 + 0.4 * amt : 0.15 + 0.6 * amt;
-        on = sv > 1 - width;
-        if (C.pattern === 'tabby' && n[1] > 0.55 && reg !== 'head' && reg !== 'muzzle') on = true; // dorsal stripe
-        if (n[1] < -0.5 && C.countershade > 0.3) on = on && C.pattern === 'stripes' && amt > 0.7;
+        on = st(sv, 1 - width, 0.6);
+        if (C.pattern === 'tabby' && reg !== 'head' && reg !== 'muzzle') on = Math.max(on, st(n[1], 0.55, 1)); // dorsal stripe
+        if (n[1] < -0.5 && C.countershade > 0.3 && !(C.pattern === 'stripes' && amt > 0.7)) on = 0;
         break;
       }
       case 'patches': {
         const v = noise3([q[0] * 2.6 * fs + 11, q[1] * 2.6 * fs, q[2] * 2.6 * fs]) + noise3([q[0] * 6 * fs, q[1] * 6 * fs + 3, q[2] * 6 * fs]) * 0.35;
-        on = v > 0.55 - amt * 1.1;
+        on = st(v, 0.55 - amt * 1.1, 0.4);
         break;
       }
       case 'saddle': {
         const line = ctx.withers * (0.92 - 0.38 * amt);
         const body = ['body', 'chest', 'belly', 'neck', 'mane', 'tail'].includes(reg);
-        on = body && p[1] > line && n[1] > -0.25 && !(reg === 'neck' && p[2] > ctx.size * 0.55);
-        if (reg === 'tail' && n[1] > 0.1) on = true;
-        if (reg === 'head' || reg === 'muzzle' || reg === 'brow') on = amt > 0.5 && (reg === 'muzzle' || n[1] > 0.6);
+        on = body && !(reg === 'neck' && p[2] > ctx.size * 0.55) ? st(p[1], line, ctx.size * 0.1) * st(n[1], -0.25, 2) : 0;
+        if (reg === 'tail') on = Math.max(on, st(n[1], 0.1, 2));
+        if (reg === 'head' || reg === 'muzzle' || reg === 'brow') on = amt > 0.5 ? (reg === 'muzzle' ? 1 : st(n[1], 0.6, 2)) : 0;
         break;
       }
       case 'points': {
         const face = amt > 0.7 && (reg === 'head' || reg === 'brow');
-        const ext = face || (isLeg && o.u > 0.55 - amt * 0.3) || reg === 'ear' || reg === 'tail' || reg === 'muzzle' || reg === 'jaw' || reg === 'nose';
-        if (ext) {
-          col = mix(col, pat, face ? 1 : isLeg ? clamp((o.u - 0.35) * 2.5) : reg === 'tail' ? clamp(0.3 + o.u) : 0.9);
-        }
+        const ext = face || (isLeg && o.u > 0.4 - amt * 0.3) || reg === 'ear' || reg === 'tail' || reg === 'muzzle' || reg === 'jaw' || reg === 'nose';
+        if (ext) col = mix(col, pat, face ? 1 : isLeg ? clamp((o.u - 0.35) * 2.5) : reg === 'tail' ? clamp(0.3 + o.u) : 0.9);
         break;
       }
       case 'scales': {
         // irregular plates: each cell its own shade between base and pattern, darker seams
         const [f1, f2, id] = worleyCells([q[0] * 9 * fs, q[1] * 9 * fs, q[2] * 9 * fs], rc.seed);
-        if (n[1] < lerp(-0.85, 0.35, C.countershade) && C.countershade > 0) break; // belly plates stay clean
-        col = mix(col, pat, id * amt * 0.7);
-        on = f2 - f1 < 0.08 * (0.5 + amt);
-        if (on) col = mix(col, pat, 0.75);
-        on = false;
+        const belly = C.countershade > 0 ? 1 - st(n[1], csThr, 4) : 0;
+        col = mix(col, pat, id * amt * 0.7 * (1 - belly));
+        col = mix(col, pat, 0.75 * (1 - st(f2 - f1, 0.08 * (0.5 + amt), 0.15)) * (1 - belly * 0.7));
         break;
       }
       case 'split': {
         // front half / back half (griffin: eagle at the front, lion at the back)
         const zs = ctx.size * lerp(0.6, -0.6, amt);
-        on = p[2] > zs + noise3([q[0] * 4, q[1] * 4, q[2] * 4]) * ctx.size * 0.06;
+        on = st(p[2], zs + noise3([q[0] * 4, q[1] * 4, q[2] * 4]) * ctx.size * 0.06, ctx.size * 0.1);
         break;
       }
       case 'solid':
         break;
     }
-    if (on) col = pat;
+    if (on > 0) col = mix(col, pat, on);
   }
 
   // ── markings
   if (C.eyePatch && ctx.eyes && (reg === 'head' || reg === 'brow' || reg === 'muzzle')) {
-    for (const e of ctx.eyes) if (Math.hypot(p[0] - e.c[0], p[1] - e.c[1], p[2] - e.c[2]) < e.r * 2.5) col = hexRgb(C.eyePatch);
+    for (const e of ctx.eyes) col = mix(col, hexRgb(C.eyePatch), 1 - st(Math.hypot(p[0] - e.c[0], p[1] - e.c[1], p[2] - e.c[2]), e.r * 2.5, e.r * 2));
   }
   if (C.mane && reg === 'mane') col = hexRgb(C.mane);
   if (C.tail && (reg === 'tail' || reg === 'tailTip')) col = hexRgb(C.tail);
   if (C.muzzle && (reg === 'muzzle' || reg === 'jaw')) col = hexRgb(C.muzzle);
-  if (C.socks > 0 && isLeg && o.u > 1 - C.socks * 0.55) col = hexRgb(C.sockColor);
+  if (C.socks > 0 && isLeg) col = mix(col, hexRgb(C.sockColor), st(o.u, 1 - C.socks * 0.55, 0.15));
   if (C.blaze && (reg === 'head' || reg === 'muzzle' || reg === 'brow')) {
     const w = rc.head.size * (reg === 'muzzle' ? 0.32 : 0.22) * rc.scale;
-    if (Math.abs(p[0]) < w && (n[1] > 0.2 || n[2] > 0.4)) col = hexRgb(C.sockColor);
+    if (n[1] > 0.2 || n[2] > 0.4) col = mix(col, hexRgb(C.sockColor), 1 - st(Math.abs(p[0]), w, w * 2));
   }
   if (reg === 'ear') {
-    const inner = o.prim.axis ? dot(n, o.prim.axis) > 0.45 : false;
-    if (C.earTip && o.u > 0.62) col = hexRgb(C.earTip);
-    else if (inner && rc.ears.droop < 0.5) col = hexRgb(C.earInner);
+    if (rc.ears.droop < 0.5 && o.prim.axis) col = mix(col, hexRgb(C.earInner), st(dot(n, o.prim.axis), 0.45, 1.5));
+    if (C.earTip) col = mix(col, hexRgb(C.earTip), st(o.u, 0.62, 0.3));
   }
   if (reg === 'earInner') col = hexRgb(C.earInner);
-  if (C.tailTip && ((reg === 'tail' && o.u > 0.8) || reg === 'tailTip')) col = hexRgb(C.tailTip);
+  if (C.tailTip && reg === 'tail') col = mix(col, hexRgb(C.tailTip), st(o.u, 0.8, 0.25));
+  if (C.tailTip && reg === 'tailTip') col = hexRgb(C.tailTip);
   if (reg === 'tailTip' && !C.tailTip) col = mix(col, pat, 0.8);
   if (reg === 'nose') col = hexRgb(C.nose);
   if (reg === 'beak') col = hexRgb(C.beak);
@@ -203,7 +208,7 @@ export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner): RGB {
   if (reg === 'wing') col = C.wing ? hexRgb(C.wing) : col;
   if (reg === 'hoof') col = hexRgb(C.hoof);
   if (reg === 'horn') col = mix(hexRgb(C.horn), hexRgb(C.hoof), 0.15);
-  if (reg === 'paw' && n[1] < -0.55) col = hexRgb(C.nose); // pads
+  if (reg === 'paw') col = mix(col, hexRgb(C.nose), st(-n[1], 0.55, 1)); // pads
 
   return col;
 }

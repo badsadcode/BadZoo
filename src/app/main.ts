@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import type { AnimalRecipe } from '../core/recipe';
+import { BASE, mergeRecipe, type AnimalRecipe } from '../core/recipe';
 import { blendRecipes, Category, categoryOf, presetRecipe, randomRecipe, SPECIES, vary } from '../core/species';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -170,7 +170,7 @@ worker.onmessage = async (e) => {
     lastGlb = glb;
     await show(glb, clips);
     const s = stats;
-    $('stats').textContent = `${s.tris.toLocaleString()} tris · ${s.shapes} sculpt shapes · ${s.height.toFixed(2)} m tall · ${s.length.toFixed(2)} m long · ${Math.round(s.ms)} ms`;
+    $('stats').textContent = `${s.tris.toLocaleString()} tris · ${effective().mesh.texture ? `${effective().mesh.texture}² texture · ` : ''}${s.height.toFixed(2)} m tall · ${s.length.toFixed(2)} m long · ${Math.round(s.ms)} ms`;
   }
   if (queued) {
     queued = false;
@@ -196,7 +196,7 @@ function rebuildSoon() {
 }
 
 // ─────────────────────────────────────────────────────────── controls ──
-type Kind = 'len' | 'num' | 'deg' | 'color' | 'ocolor' | 'select' | 'bool';
+type Kind = 'len' | 'num' | 'deg' | 'color' | 'ocolor' | 'select' | 'nselect' | 'bool';
 interface Ctl {
   path: string;
   label: string;
@@ -245,7 +245,17 @@ const SECTIONS: { title: string; open?: boolean; ctls: Ctl[] }[] = [
     title: 'Tack (mounts)',
     ctls: [B('tack.saddle', 'Saddle'), B('tack.bridle', 'Bridle'), B('tack.blanket', 'Blanket'), S('tack.barding', 'Barding', ['none', 'leather', 'plate']), C('tack.leather', 'Leather'), C('tack.cloth', 'Cloth'), C('tack.metal', 'Metal')],
   },
-  { title: 'Mesh', ctls: [N('mesh.tris', 'Triangles', 600, 12000, 100), S('mesh.shading', 'Shading', ['flat', 'smooth']), N('mesh.resolution', 'Sculpt res.', 80, 260, 10)] },
+  {
+    title: 'Mesh & texture',
+    ctls: [
+      { path: 'mesh.tris', label: 'LOD', kind: 'nselect', options: ['800', '1500', '3000', '5000', '8000'] },
+      N('mesh.tris', 'Triangles', 400, 12000, 100),
+      S('mesh.topology', 'Topology', ['remesh', 'decimate']),
+      S('mesh.shading', 'Shading', ['flat', 'smooth']),
+      { path: 'mesh.texture', label: 'Texture', kind: 'nselect', options: ['0', '512', '1024', '2048'] },
+      N('mesh.resolution', 'Sculpt res.', 80, 260, 10),
+    ],
+  },
 ];
 
 const get = (o: unknown, path: string): unknown => path.split('.').reduce((a: any, k) => a?.[k], o); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -310,6 +320,17 @@ function renderControls() {
             set(state.own, c.path, chk.checked ? col.value : '');
             rebuildSoon();
           };
+      } else if (c.kind === 'nselect') {
+        const label = (o: string) => (c.path === 'mesh.texture' ? (o === '0' ? 'none (facet colours)' : `${o}²`) : `${o} tris`);
+        const cur = String(v);
+        const opts = c.options!.includes(cur) ? c.options! : [cur, ...c.options!];
+        row.innerHTML = `${lab}<select>${opts.map((o) => `<option value="${o}" ${o === cur ? 'selected' : ''}>${c.options!.includes(o) ? label(o) : `custom (${o})`}</option>`).join('')}</select><span></span>`;
+        const sel = row.querySelector('select')!;
+        sel.onchange = () => {
+          set(state.own, c.path, Number(sel.value));
+          renderControls();
+          rebuildSoon();
+        };
       } else if (c.kind === 'select') {
         row.innerHTML = `${lab}<select>${c.options!.map((o) => `<option ${o === v ? 'selected' : ''}>${o}</option>`).join('')}</select><span></span>`;
         const sel = row.querySelector('select')!;
@@ -426,7 +447,7 @@ function initControls() {
     if (!f) return;
     try {
       const j = JSON.parse(await f.text());
-      state = j.own ? { own: j.own, hybrid: j.hybrid ?? '', blend: j.blend ?? 0 } : { own: j, hybrid: '', blend: 0 };
+      state = j.own ? { own: mergeRecipe(BASE, j.own), hybrid: j.hybrid ?? '', blend: j.blend ?? 0 } : { own: mergeRecipe(BASE, j), hybrid: '', blend: 0 };
       framed = '';
       renderAll();
       toast('📂 Recipe loaded');
@@ -475,7 +496,7 @@ function loadFromHash(): State | null {
   if (!m) return null;
   try {
     const s = JSON.parse(decodeURIComponent(escape(atob(m[1]))));
-    if (s?.own?.body) return s;
+    if (s?.own?.body) return { ...s, own: mergeRecipe(BASE, s.own) };
   } catch {
     /* ignore */
   }

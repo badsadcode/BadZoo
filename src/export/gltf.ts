@@ -5,6 +5,7 @@
  */
 import type { Animal, MeshOut } from '../core/animal';
 import { sub } from '../core/math';
+import { encodePng } from '../core/texture';
 
 const ARRAY_BUFFER = 34962;
 const ELEMENT_ARRAY_BUFFER = 34963;
@@ -37,9 +38,9 @@ class Buf {
     this.length += bytes.byteLength;
     return this.views.length - 1;
   }
-  f32(data: ArrayLike<number>, type: 'SCALAR' | 'VEC3' | 'VEC4' | 'MAT4', target?: number, minmax = false) {
+  f32(data: ArrayLike<number>, type: 'SCALAR' | 'VEC2' | 'VEC3' | 'VEC4' | 'MAT4', target?: number, minmax = false) {
     const arr = Float32Array.from(data);
-    const n = { SCALAR: 1, VEC3: 3, VEC4: 4, MAT4: 16 }[type];
+    const n = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 }[type];
     const acc: Acc = { bufferView: this.view(new Uint8Array(arr.buffer), target), componentType: FLOAT, count: arr.length / n, type };
     if (minmax) {
       const mn = new Array(n).fill(Infinity);
@@ -124,16 +125,27 @@ export function buildGltf(an: Animal, opts: GltfOptions = {}): { json: any; bin:
   });
   json.scenes[0].nodes.push(0);
 
+  // ── baked colour atlas, shared by the coat and the eyes
+  if (an.texture) {
+    json.images = [{ name: 'Atlas', mimeType: 'image/png', bufferView: bb.view(encodePng(an.texture)) }];
+    json.samplers = [{ magFilter: 9729, minFilter: 9987, wrapS: 33071, wrapT: 33071 }];
+    json.textures = [{ sampler: 0, source: 0 }];
+    json.materials[0].pbrMetallicRoughness.baseColorTexture = { index: 0 };
+    json.materials[1].pbrMetallicRoughness.baseColorTexture = { index: 0 };
+  }
+  json.materials.push({ name: 'Wings', pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 0.85 } });
   const prim = (m: MeshOut, material: number) => {
     const n = m.positions.length / 3;
+    const attributes: Record<string, number> = {
+      POSITION: bb.f32(m.positions, 'VEC3', ARRAY_BUFFER, true),
+      NORMAL: bb.f32(m.normals, 'VEC3', ARRAY_BUFFER),
+    };
+    if (m.uvs) attributes.TEXCOORD_0 = bb.f32(m.uvs, 'VEC2', ARRAY_BUFFER);
+    else attributes.COLOR_0 = bb.f32(m.colors, 'VEC3', ARRAY_BUFFER);
+    attributes.JOINTS_0 = bb.u8vec4(m.joints, ARRAY_BUFFER);
+    attributes.WEIGHTS_0 = bb.f32(m.weights, 'VEC4', ARRAY_BUFFER);
     return {
-      attributes: {
-        POSITION: bb.f32(m.positions, 'VEC3', ARRAY_BUFFER, true),
-        NORMAL: bb.f32(m.normals, 'VEC3', ARRAY_BUFFER),
-        COLOR_0: bb.f32(m.colors, 'VEC3', ARRAY_BUFFER),
-        JOINTS_0: bb.u8vec4(m.joints, ARRAY_BUFFER),
-        WEIGHTS_0: bb.f32(m.weights, 'VEC4', ARRAY_BUFFER),
-      },
+      attributes,
       indices: bb.indices(m.indices, n),
       material,
       mode: 4,
@@ -142,6 +154,7 @@ export function buildGltf(an: Animal, opts: GltfOptions = {}): { json: any; bin:
   const prims = [prim(an.body, 0), prim(an.eyes, 1)];
   if (an.tack) prims.push(prim(an.tack, 2));
   if (an.metal) prims.push(prim(an.metal, 3));
+  if (an.wings) prims.push(prim(an.wings, 4));
   json.meshes.push({ name: `${name}_mesh`, primitives: prims });
   // drop materials nobody uses (validator warns otherwise)
   const used = new Set(prims.map((p) => p.material));

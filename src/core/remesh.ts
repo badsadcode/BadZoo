@@ -89,7 +89,7 @@ export function remesh(input: TriMesh, g: Grid, opts: RemeshOptions): TriMesh {
     const s = opts.sizeAt(P[a], P[a + 1], P[a + 2]);
     weighted += area(T, i) / (s * s);
   }
-  const L0 = Math.sqrt(weighted / ((Math.sqrt(3) / 4) * opts.targetTris));
+  let L0 = Math.sqrt(weighted / ((Math.sqrt(3) / 4) * opts.targetTris));
   const Lat = (i: number) => L0 * opts.sizeAt(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]);
   const Ledge = (a: number, b: number) => (Lat(a) + Lat(b)) / 2;
 
@@ -379,6 +379,17 @@ export function remesh(input: TriMesh, g: Grid, opts: RemeshOptions): TriMesh {
       grown.set(sharp);
       sharp = grown;
     }
+    collapsePass();
+    flipPass();
+    relaxPass();
+    // stay on budget: spiky animals (pinned tips, tight curves) attract extra triangles
+    if (it >= iters - 3) {
+      const ratio = T.length / 3 / opts.targetTris;
+      if (ratio > 1.02 || ratio < 0.9) L0 *= Math.sqrt(ratio);
+    }
+  }
+  for (let extra = 0; extra < 3 && T.length / 3 > opts.targetTris * 1.04; extra++) {
+    L0 *= Math.sqrt((T.length / 3) / opts.targetTris);
     collapsePass();
     flipPass();
     relaxPass();

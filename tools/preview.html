@@ -26,6 +26,7 @@ const sun = new THREE.DirectionalLight(0xfff0e0, 2.4); sun.position.set(2.5, 5, 
 const g = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshStandardMaterial({ color: 0x3a3448 })); g.rotation.x = -Math.PI/2; scene.add(g);
 const loader = new GLTFLoader();
 let i = 0;
+const jobs = [];
 for (const sp of species) {
   const [name, seed] = sp.split(':');
   const rc = presetRecipe(name, Number(seed ?? 1));
@@ -50,12 +51,16 @@ for (const sp of species) {
     const col = i % cols, row = Math.floor(i / cols);
     const y = (rows - 1 - row) * H;
     r.setViewport(col * W, y, W, H); r.setScissor(col * W, y, W, H);
-    root.visible = true;
-    scene.children.forEach(o => { if (o.isGroup || o.type === 'Group' || o.type === 'Object3D') o.visible = o === root; });
-    r.render(scene, cam);
+    jobs.push({ root, cam, col, y });
     i++;
   }
   console.log(JSON.stringify({ species: name, ...an.stats }));
+}
+await new Promise((res) => setTimeout(res, 800));
+for (const j of jobs) {
+  scene.children.forEach(o => { if (o.isGroup || o.type === 'Group' || o.type === 'Object3D') o.visible = o === j.root; });
+  r.setViewport(j.col * W, j.y, W, H); r.setScissor(j.col * W, j.y, W, H);
+  r.render(scene, j.cam);
 }
 document.title = 'done';
 </script></body></html>

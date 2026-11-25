@@ -12,6 +12,10 @@ quadruped skeleton and procedural gaits, all from a seed-reproducible recipe.
 ![Fantasy](docs/lineup-fantasy.webp)
 ![Mounts](docs/lineup-mounts.webp)
 
+| Topology (remeshed, wireframe) | Baked atlas (dog) |
+|---|---|
+| ![Topology](docs/topology.webp) | ![Atlas](docs/atlas.webp) |
+
 - **App:** `npm install && npm run dev`
 - **Rig / export contract:** [`docs/RIG.md`](docs/RIG.md)
 
@@ -30,23 +34,25 @@ quadruped skeleton and procedural gaits, all from a seed-reproducible recipe.
 | Rig | 33 core bones (+3 per wing, +3 for a trunk), identity rest rotations, `Socket_Saddle` (rider) and `Socket_Head` |
 | Animations | Idle, Walk (lateral sequence), Trot (diagonal), Gallop (rotary, with spine flex), Eat, Fly (winged); lizards wriggle their spines, wings fold when grounded, trunks sway |
 | Export | GLB (Khronos-validator clean), `.badzoo.json` recipe, share links |
-| Budget | 600–12k triangles (default ~4.5k) |
+| Topology | Adaptive isotropic remesh: even triangles snapped to the sculpt, denser on the face, on tight curves and in edge loops around joints; sharp tips pinned. Raw decimation still available |
+| Texturing | UV unwrap (islands per body part, angle-split, packed, extra texel density on the head) + baked 512–2048² colour atlas: soft countershading, anti-aliased patterns, eye rims, mouth line, nostrils, toe grooves, fur variation, painted irises. Facet-colour mode still available |
+| Budget | LOD presets 800 / 1.5k / 3k / 5k / 8k (default 3k body + 160 for the eyes) |
 
 ## How it works (short version)
 
-1. **Anatomy → sculpt.** The recipe places joints the way a real quadruped's sit (sloped
-   shoulder blade, elbow tucked at the brisket, raised hock for toe-walkers). It then hangs about
-   60–100 signed-distance "clay" shapes on them: ribcage, rump, haunches, triceps, gaskins,
-   cheeks, brows, cupped ears, nostrils and eye sockets (carved). These are blended with a
-   smooth minimum.
+1. **Anatomy → sculpt.** The recipe places joints the way a real animal's sit, then hangs
+   60–110 signed-distance "clay" shapes on them (ribcage, rump, haunches, cheeks, brows, cupped
+   ears, horns, spines…), blended with a smooth minimum.
 2. **Surface nets** turn the sculpt into one closed surface (~50k triangles).
-3. **Quadric decimation** reduces it to the budget. It keeps the mesh manifold, rejects
-   fold-overs and **spends triangles on the face**: the nose, muzzle and ears get 5–9× importance.
-4. **Skinning comes from the sculpt.** Every shape knows which bones it follows, so each vertex
-   listens to the shapes it sits on.
-5. **Painting** gives each facet one colour from what it is (nose, hoof, inner ear), which way it
-   faces, and 3D pattern fields. A majority filter then removes stray "torn" triangles.
-6. **Gaits** come from real footfall orders, with IK legs so stance feet stay planted.
+3. **Topology.** Quadric decimation, then an **adaptive isotropic remesh**: split / collapse /
+   flip / relax / project, six rounds. Triangles come out even, sized by a field that is finer
+   on the face, on curves and around joints, and the budget is held exactly. Ear and horn tips are
+   pinned so smoothing can't nibble them away.
+4. **Skinning comes from the sculpt.** Every shape knows which bones it follows.
+5. **UVs + texture.** Islands follow body parts, get split by surface direction and are packed
+   into an atlas. Every texel is painted in 3D with the coat rules plus details that don't
+   deserve geometry.
+6. **Gaits** use real footfall orders, with IK legs so stance feet stay planted.
 
 The viewer **renders the exported GLB**, the same file your engine gets.
 
@@ -54,7 +60,7 @@ The viewer **renders the exported GLB**, the same file your engine gets.
 
 ```bash
 npm run dev                              # the app
-npm test                                 # 233 tests: manifold meshing, feet on floor, weights, NaN-free clips, features present, validator-clean GLB for all 46 presets
+npm test                                 # 281 tests: manifold meshing + remeshing, UVs in range, feet on floor, weights, NaN-free clips, features present, validator-clean GLB for all 46 presets
 npm run cli -- export horse 3 out/       # one animal → GLB + recipe
 npm run cli -- samples out/samples       # every species
 ```
@@ -63,7 +69,7 @@ npm run cli -- samples out/samples       # every species
 
 | Area | State |
 |---|---|
-| Sculpt → mesh → decimate → skin → paint | ✅ working, ~0.6–3 s per animal in a Web Worker (armoured mounts up to ~5 s) |
+| Sculpt → remesh → skin → unwrap → bake | ✅ working, ~2.5–5 s per animal in a Web Worker (remeshing ≈ 1–2 s and baking ≈ 1.2 s of that; not optimised yet) |
 | GLB export | ✅ Khronos validator: 0 errors on all 46 presets |
 | Tack | ✅ fits every body plan; reins are skinned rope, so extreme head poses can stretch them |
 | Wings | ✅ fold / flap; Fly is a hover-ish cycle, no glide or take-off yet |
@@ -71,3 +77,9 @@ npm run cli -- samples out/samples       # every species
 | Unity / Godot / Unreal import | ⚠️ not yet verified in those editors (Generic rig; no Humanoid mapping for quadrupeds) |
 | Birds, snakes, fish, insects, six-legged things | ❌ not yet: other body plans are the next archetypes |
 | Facial animation / mouth | ❌ the jaw doesn't open yet |
+
+### Texturing notes
+
+The atlas is a plain sRGB PNG embedded in the GLB, so you can open it in any paint tool and paint
+over it: islands are per body part (head, each ear, each leg, torso, neck, tail) and keep their
+place for a given recipe. Wing sheets and tack stay vertex-coloured in their own primitives.
