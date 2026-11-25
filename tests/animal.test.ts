@@ -75,7 +75,7 @@ describe.each(Object.keys(SPECIES))('%s', (sp) => {
           for (const leg of an.anatomy.legs) {
             const toe = leg.chain[4];
             const tip = add(P[toe], qRotate(G[toe], sub(leg.tip, an.anatomy.bones[toe].world)));
-            expect(Math.abs(tip[1] - leg.tip[1])).toBeLessThan(0.01);
+            expect(Math.abs(tip[1] - (leg.stand ?? leg.tip)[1])).toBeLessThan(0.01);
           }
         }
       }
@@ -92,7 +92,7 @@ describe.each(Object.keys(SPECIES))('%s', (sp) => {
   it('has the features its recipe asks for', () => {
     const rc = an.recipe;
     expect(an.clips.some((c) => c.name === 'Fly')).toBe(rc.wings.kind !== 'none');
-    if (rc.wings.kind !== 'none') expect(an.anatomy.index.WingHand_L).toBeDefined();
+    if (rc.wings.kind !== 'none') expect(rc.wings.walk ? an.anatomy.index.FrontFinger1_L : an.anatomy.index.WingHand_L).toBeDefined();
     if (rc.head.trunk > 0) expect(an.anatomy.index.Trunk1).toBeDefined();
     if (rc.tack.saddle) {
       expect(an.tackPieces).toContain('Saddle');

@@ -48,13 +48,20 @@ export const TRUNK_BONES = 3;
 export function boneDefs(rc: AnimalRecipe): [string, string | null][] {
   const defs = [...BONE_DEFS];
   if (rc.head.trunk > 0) for (let i = 0; i < TRUNK_BONES; i++) defs.push([`Trunk${i + 1}`, i === 0 ? 'Head' : `Trunk${i}`]);
-  if (rc.wings.kind !== 'none')
+  if (isWingWalker(rc)) {
+    for (const s of SIDES) for (let i = 1; i <= 3; i++) defs.push([`FrontFinger${i}_${s}`, `FrontFoot_${s}`]);
+  } else if (rc.wings.kind !== 'none')
     for (const s of SIDES) defs.push([`WingArm_${s}`, 'Chest'], [`WingFore_${s}`, `WingArm_${s}`], [`WingHand_${s}`, `WingFore_${s}`]);
   return defs;
 }
 
+/** wyvern body plan: membrane wings that double as the front legs */
+export const isWingWalker = (rc: AnimalRecipe) => rc.wings.kind === 'membrane' && !!rc.wings.walk;
+
 export interface Wing {
   side: Side;
+  /** wing-walkers: one bone per finger (they fold the membrane like a fan) */
+  fingerBones?: number[];
   /** bone indices [arm, fore, hand] */
   bones: number[];
   /** shoulder, elbow, wrist */
@@ -82,6 +89,10 @@ export interface Leg {
   tip: V3;
   /** +1 = joint between upper and lower bends forward (hind knee), -1 = backward (front elbow) */
   knee: 1 | -1;
+  /** where the toe tip stands when on the ground, if not its rest position (wing-walkers rest with arms spread) */
+  stand?: V3;
+  /** this leg is also a wing (wyvern) */
+  wing?: boolean;
 }
 
 export interface Eye {
@@ -89,6 +100,11 @@ export interface Eye {
   c: V3;
   r: number;
   look: V3;
+  /** where the line of sight leaves the skull */
+  surf: V3;
+  /** drawn into the texture instead of modelled */
+  painted?: boolean;
+  lids: number;
 }
 
 export interface Anatomy {
@@ -178,6 +194,7 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     return pts; // [top, j1, j2, j3, tip]
   };
   const sprawl = rc.legs.stance === 'sprawling';
+  const wingWalk = isWingWalker(rc);
   /** lizard legs: upper bone points out sideways, lower bone down, foot flat and turned out */
   const layLegSprawl = (top: V3, front: boolean, sx: number) => {
     const dirs: V3[] = [
@@ -217,13 +234,25 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   for (const s of SIDES) {
     const sx = s === 'L' ? 1 : -1;
     const sj: V3 = [sx * B.chestWidth * 0.74, shoulderY, shoulderZ];
-    const fp = sprawl ? layLegSprawl(sj, true, sx) : layLeg(sj, pat.front);
+    let fp = sprawl ? layLegSprawl(sj, true, sx) : layLeg(sj, pat.front);
+    let stand: V3 | undefined;
+    if (wingWalk) {
+      // rest pose = wings spread; on the ground the wrist knuckles carry the front of the body
+      const S = rc.wings.span;
+      const sh: V3 = [sx * B.chestWidth * 0.62, yW - D * 0.12, shoulderZ - L * 0.04];
+      const el = add(sh, scale(norm([sx, 0.3, -0.32]), S * 0.3));
+      const wr = add(el, scale(norm([sx, 0.1, 0.34]), S * 0.33));
+      const kn = add(wr, scale(norm([sx * 0.25, -0.75, 0.45]), T * 0.75));
+      const cl = add(kn, scale(norm([sx * 0.1, -0.35, 1]), T * 0.55));
+      fp = [sh, el, wr, kn, cl];
+      stand = [sx * (B.chestWidth * 1.35 + T), groundClear * 0.4, shoulderZ + L * 0.12];
+    }
     world[`Scapula_${s}`] = [sx * B.chestWidth * 0.55, yW - D * 0.08, scapTopZ];
     world[`UpperArm_${s}`] = fp[0];
     world[`Forearm_${s}`] = fp[1];
     world[`FrontFoot_${s}`] = fp[2];
     world[`FrontToe_${s}`] = fp[3];
-    legs.push({ side: s, front: true, chain: ['Scapula', 'UpperArm', 'Forearm', 'FrontFoot', 'FrontToe'].map((n) => index[`${n}_${s}`]), tip: fp[4], knee: -1 });
+    legs.push({ side: s, front: true, chain: ['Scapula', 'UpperArm', 'Forearm', 'FrontFoot', 'FrontToe'].map((n) => index[`${n}_${s}`]), tip: fp[4], knee: -1, ...(stand ? { stand, wing: true } : {}) });
 
     const hj: V3 = [sx * B.rumpWidth * 0.78, hipY, hipZ];
     const hp = sprawl ? layLegSprawl(hj, false, sx) : layLeg(hj, pat.hind);
@@ -288,6 +317,15 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     const ft = legs.find((l) => l.side === s && l.front)!.tip;
     const n = (x: string) => `${x}_${s}`;
     const sh = B.shoulders;
+    if (wingWalk) {
+      // wing-arm: heavy shoulder, long arm bones, a knuckle and a claw to walk on
+      ell('body', lerp3(sc, sj, 0.5), sub(sj, sc), side, [T * 1.6 * sh, T * 0.9 * sh, len(sub(sj, sc)) * 0.7 + T * 0.5], kBody * 0.6, W([n('Scapula'), 0.6], ['Chest', 0.4]), woolly);
+      cone('leg', sj, el, T * 1.3, T * 0.8, T * 0.7, W([n('Scapula'), 0.5], [n('UpperArm'), 0.5]), W([n('UpperArm'), 1]), W([n('UpperArm'), 0.5], [n('Forearm'), 0.5]), { span: [0, 0.3] });
+      cone('lowerLeg', el, wr, T * 0.82, T * 0.55, T * 0.45, W([n('UpperArm'), 0.4], [n('Forearm'), 0.6]), W([n('Forearm'), 1]), W([n('Forearm'), 0.5], [n('FrontFoot'), 0.5]), { span: [0.3, 0.8] });
+      ell('lowerLeg', wr, sub(tj, wr), side, [T * 0.62, T * 0.6, T * 0.7], T * 0.35, W([n('FrontFoot'), 0.7], [n('Forearm'), 0.3]));
+      cone('lowerLeg', wr, tj, T * 0.55, T * 0.4, T * 0.25, W([n('FrontFoot'), 1]), W([n('FrontFoot'), 1]), W([n('FrontToe'), 1]), { span: [0.8, 0.9] });
+      cone('horn', tj, ft, T * 0.32, T * 0.06, T * 0.08, W([n('FrontToe'), 1]));
+    } else {
     // shoulder blade + deltoid/triceps mass
     ell('body', lerp3(sc, sj, 0.55), sub(sj, sc), side, [T * 1.6 * sh, T * 0.75 * sh, len(sub(sj, sc)) * 0.62], kBody * 0.6, W([n('Scapula'), 0.7], ['Chest', 0.3]), woolly);
     ell('leg', add(lerp3(sj, el, 0.5), [0, 0, -T * 0.45]), sub(el, sj), side, [T * 1.2 * sh, T * 1.05 * sh, len(sub(el, sj)) * 0.55], T * 0.8, W([n('UpperArm'), 0.8], [n('Scapula'), 0.2]), legWool);
@@ -298,6 +336,7 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     ell('lowerLeg', add(lerp3(el, wr, 0.3), [0, 0, T * 0.12]), sub(wr, el), side, [T * 0.75, T * 0.8, len(sub(wr, el)) * 0.33], T * 0.4, W([n('Forearm'), 1]));
     cone('lowerLeg', wr, tj, T * 0.52, T * 0.44, T * 0.3, W([n('Forearm'), 0.5], [n('FrontFoot'), 0.5]), W([n('FrontFoot'), 1]), W([n('FrontFoot'), 0.5], [n('FrontToe'), 0.5]), { span: [0.7, 0.9] });
     addFoot(n('FrontFoot'), n('FrontToe'), wr, tj, ft);
+    }
 
     const hj = world[`Thigh_${s}`];
     const kn = world[`Shin_${s}`];
@@ -434,6 +473,19 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
       const c = add(add(lerp3(muzzleBase, muzzleTip, 0.62), scale([1, 0, 0], sx * mR * 0.62 * fx)), scale(mUp, -mR * (0.45 + 0.45 * flews) * fy));
       ell('jaw', c, mDir, mUp, [mR * 0.42 * fx, mR * (0.3 + 0.45 * flews) * fy, mLen * 0.32 + tipR * 0.35], mR * 0.3, head);
     }
+  }
+  // fangs along the mouth line, the front pair longest
+  const teeth = Hd.teeth ?? 0;
+  if (teeth > 0.03 && !beak && Hd.trunk <= 0) {
+    const ts = [0.38, 0.55, 0.7, 0.86];
+    for (const sx of [1, -1])
+      ts.forEach((t, i) => {
+        const rt = lerp(mR * 1.05, tipR, t);
+        const root = add(add(lerp3(muzzleBase, muzzleTip, t), scale([1, 0, 0], sx * rt * 0.72 * fx)), scale(mUp, -rt * 0.5 * fy));
+        const l = teeth * mR * (i === ts.length - 1 ? 0.95 : 0.5);
+        const rb = Math.max(teeth * mR * (i === ts.length - 1 ? 0.16 : 0.11), minThick * 0.45);
+        cone('horn', root, add(root, scale(norm(add(scale(mUp, -1), [sx * 0.15, 0, 0])), l)), rb, Math.max(rb * 0.15, minThick * 0.3), rb * 0.3, head);
+      });
   }
   // nose bridge: Roman bump or dished dip along the top of the muzzle
   const bridge = Hd.muzzleBridge ?? 0;
@@ -646,6 +698,19 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     ell('tailTip', add(tp, scale(dirT, -Tl.thickness * 0.3)), dirT, [0, 1, 0], [Tl.thickness * 1.3 * Tl.tuft, Tl.thickness * 1.3 * Tl.tuft, Tl.thickness * 2.6 * Tl.tuft], Tl.thickness * 0.5, W([`Tail${TAIL_BONES}`, 1]), { span: [1, 1] });
   }
   const tailTip = tailPts[TAIL_BONES];
+  // tail spikes: a crown of spikes at the tip, raking backward
+  if ((Tl.spikes ?? 0) > 0.03) {
+    const dT = norm(sub(tailPts[TAIL_BONES], tailPts[TAIL_BONES - 1]));
+    const sideT = norm(cross([0, 1, 0], dT));
+    const upT = cross(dT, sideT);
+    const th = tailR(1);
+    const base = sub(tailTip, scale(dT, th * 1.2));
+    const outs: V3[] = [norm(add(upT, scale(sideT, 0.6))), norm(add(upT, scale(sideT, -0.6))), sideT, scale(sideT, -1)];
+    for (const o of outs) {
+      const l = Tl.spikes * Math.max(th, Tl.thickness * 0.5) * 4.5;
+      cone('spine', base, add(base, scale(norm(add(o, scale(dT, 0.9))), l)), Math.max(th * 0.55 * Tl.spikes, minThick * 0.5), minThick * 0.3, th * 0.2, W([`Tail${TAIL_BONES}`, 1]));
+    }
+  }
 
   // ── mane ruff (lion): a big fluffy collar around head and neck
   if (N.mane === 'ruff') {
@@ -756,7 +821,32 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   // ── wings: arm bones are sculpted (so they grow out of the shoulders); membrane / feathers are
   // built as explicit low-poly sheets in wings.ts
   const wings: Wing[] = [];
-  if (rc.wings.kind !== 'none') {
+  if (wingWalk) {
+    // wyvern: the membrane hangs between the front-leg arm bones and three finger bones
+    const S = rc.wings.span;
+    const ch = rc.wings.chord / 0.55;
+    for (const s of SIDES) {
+      const sx = s === 'L' ? 1 : -1;
+      const sh = world[`UpperArm_${s}`];
+      const el = world[`Forearm_${s}`];
+      const wr = world[`FrontFoot_${s}`];
+      const fingers = [
+        add(wr, scale(norm([sx, -0.04, 0.06]), S * 0.44)),
+        add(wr, scale(norm([sx * 0.62, -0.12, -0.66]), S * 0.42 * ch)),
+        add(wr, scale(norm([sx * 0.16, -0.16, -1]), S * 0.34 * ch)),
+      ];
+      for (let i = 1; i <= 3; i++) world[`FrontFinger${i}_${s}`] = wr;
+      wings.push({
+        side: s,
+        bones: ['UpperArm', 'Forearm', 'FrontFoot'].map((b) => index[`${b}_${s}`]),
+        fingerBones: [1, 2, 3].map((i) => index[`FrontFinger${i}_${s}`]),
+        joints: [sh, el, wr],
+        fingers,
+        anchor: [sx * B.rumpWidth * 0.85, yP - D * 0.12, hipZ + L * 0.22],
+        anchorBone: index.Spine1,
+      });
+    }
+  } else if (rc.wings.kind !== 'none') {
     const S = rc.wings.span;
     const ch = rc.wings.chord / 0.55;
     const feathered = rc.wings.kind === 'feathered';
@@ -806,9 +896,24 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     const look = norm(add(add(scale(f, Math.cos(a)), [sx * Math.sin(a), 0, 0]), scale(uh, 0.12)));
     const origin = at(C, sx * hs * 0.25, hs * 0.18, hs * 0.48);
     const surf = surfaceAlong(origin, look, faceSet.filter((p) => p.region !== 'mane'));
-    eyes.push({ bone: index.Head, c: sub(surf, scale(look, Ey.size * 0.6)), r: Ey.size, look });
-    // a shallow socket so the eye sits in the head instead of on it
-    prims.push({ kind: 'ell', region: 'head', sub: true, c: sub(surf, scale(look, Ey.size * 0.15)), ax: frame(look), r: [Ey.size * 1.05, Ey.size * 0.85, Ey.size * 0.6], k: Ey.size * 0.5, wa: head });
+    const style = Ey.style === 'painted' && rc.mesh.texture <= 0 ? 'ball' : (Ey.style ?? 'ball');
+    const lids = clamp(Ey.lids ?? 0);
+    const r = Ey.size;
+    if (style === 'painted') {
+      eyes.push({ bone: index.Head, c: surf, r, look, surf, painted: true, lids });
+      continue;
+    }
+    const deep = style === 'socket';
+    const c = sub(surf, scale(look, r * (deep ? 0.85 : 0.6)));
+    eyes.push({ bone: index.Head, c, r, look, surf, lids });
+    // a socket so the eye sits in the head instead of on it (deeper for 'socket')
+    prims.push({ kind: 'ell', region: 'head', sub: true, c: sub(surf, scale(look, r * (deep ? 0.3 : 0.15))), ax: frame(look), r: deep ? [r * 1.25, r * 1.02, r * 0.95] : [r * 1.05, r * 0.85, r * 0.6], k: r * 0.5, wa: head });
+    if (deep || lids > 0.02) {
+      // upper eyelid: covers the top of the iris. this is what stops the "surprised" look
+      const lid = deep ? Math.max(lids, 0.25) : lids;
+      const upE = perp(uh, look);
+      prims.push({ kind: 'ell', region: 'head', c: add(add(c, scale(upE, r * (1.12 - 0.62 * lid))), scale(look, r * 0.22)), ax: frame(look, upE), r: [r * 1.18, r * 0.5, r * 0.98], k: r * 0.28, wa: head } as Prim);
+    }
   }
   // nostrils: painted when the animal is textured, carved when it's facet-coloured
   const marks: Anatomy['marks'] = [];
@@ -833,9 +938,15 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
       p.b = shift(p.b);
     } else p.c = shift(p.c);
   }
-  for (const e of eyes) e.c = shift(e.c);
+  for (const e of eyes) {
+    e.c = shift(e.c);
+    e.surf = shift(e.surf);
+  }
   for (const k of marks) k.c = shift(k.c);
-  for (const l of legs) l.tip = shift(l.tip);
+  for (const l of legs) {
+    l.tip = shift(l.tip);
+    if (l.stand) l.stand = [l.stand[0], 0, l.stand[2]]; // standing points rest on the floor
+  }
   for (const w of wings) {
     w.joints = w.joints.map(shift);
     w.fingers = w.fingers.map(shift);
@@ -885,13 +996,17 @@ export function scaleAnatomy(a: Anatomy, s: number) {
   }
   for (const e of a.eyes) {
     e.c = S(e.c);
+    e.surf = S(e.surf);
     e.r *= s;
   }
   for (const k of a.marks) {
     k.c = S(k.c);
     k.r *= s;
   }
-  for (const l of a.legs) l.tip = S(l.tip);
+  for (const l of a.legs) {
+    l.tip = S(l.tip);
+    if (l.stand) l.stand = S(l.stand);
+  }
   for (const w of a.wings) {
     w.joints = w.joints.map(S);
     w.fingers = w.fingers.map(S);

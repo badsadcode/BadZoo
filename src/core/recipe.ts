@@ -105,6 +105,8 @@ export interface AnimalRecipe {
     tusks: number;
     /** how much tusks curve: 1 = elephant, 2+ = mammoth spiral */
     tuskCurl: number;
+    /** fangs along the jaw line, 0 … 1 */
+    teeth: number;
     noseSize: number;
   };
   eyes: {
@@ -116,6 +118,10 @@ export interface AnimalRecipe {
     pupil: 'round' | 'slit' | 'bar';
     /** glowing eyes (emissive) */
     glow: boolean;
+    /** ball = round eyeballs (classic), socket = set deeper under a brow, painted = drawn on the face (texture mode) */
+    style: 'ball' | 'socket' | 'painted';
+    /** upper eyelids: 0 = wide awake ("surprised") … 1 = sleepy */
+    lids: number;
   };
   ears: {
     length: number;
@@ -144,6 +150,8 @@ export interface AnimalRecipe {
     curl: number;
     /** end tuft size (lion, cow), 0 = none */
     tuft: number;
+    /** spikes at the tail tip, 0 … 1 */
+    spikes: number;
   };
   horns: {
     kind: Horns;
@@ -156,6 +164,8 @@ export interface AnimalRecipe {
     span: number;
     /** wing depth front-to-back, relative to span */
     chord: number;
+    /** wyvern body plan: the wings are the front legs (walks on its wing-wrists, membrane folds) */
+    walk: boolean;
   };
   /** riding gear: generated as shells over the body, so it fits any animal */
   tack: {
@@ -249,12 +259,12 @@ export const BASE: AnimalRecipe = {
   body: { length: 0.5, chestDepth: 0.27, chestWidth: 0.115, rumpWidth: 0.1, waist: 0.72, belly: 0, shoulders: 1, haunch: 1, hump: 0, humps: 1, spines: 0, spineCount: 14, arch: 0.01 },
   legs: { front: 0.36, hind: 0.4, thickness: 0.048, stance: 'digitigrade', foot: 'paw', footSize: 1, feathering: 0 },
   neck: { length: 0.2, thickness: 0.07, angle: 45, mane: 'none', maneSize: 1 },
-  head: { size: 0.075, muzzleLength: 0.11, muzzleWidth: 0.04, muzzleDepth: 0.04, muzzleTaper: 0.72, muzzleSquare: 0, muzzleFlat: 0, muzzleBulb: 0, muzzleBridge: 0, muzzleDrop: 0, stop: 0.5, dome: 0, headWidth: 1, flews: 0, pitch: 12, cheeks: 1, brow: 1, nose: 'pad', noseSize: 1, trunk: 0, tusks: 0, tuskCurl: 1 },
-  eyes: { size: 0.013, angle: 32, color: '#9a6a2c', pupil: 'round', glow: false },
+  head: { size: 0.075, muzzleLength: 0.11, muzzleWidth: 0.04, muzzleDepth: 0.04, muzzleTaper: 0.72, muzzleSquare: 0, muzzleFlat: 0, muzzleBulb: 0, muzzleBridge: 0, muzzleDrop: 0, stop: 0.5, dome: 0, headWidth: 1, flews: 0, pitch: 12, cheeks: 1, brow: 1, nose: 'pad', noseSize: 1, trunk: 0, tusks: 0, tuskCurl: 1, teeth: 0 },
+  eyes: { size: 0.013, angle: 32, color: '#9a6a2c', pupil: 'round', glow: false, style: 'socket', lids: 0.3 },
   ears: { length: 0.12, width: 0.065, tip: 0.8, spread: 22, tilt: 8, droop: 0, side: 0.35, fold: 0 },
-  tail: { length: 0.38, thickness: 0.03, brush: 1.45, lift: -55, curl: 25, tuft: 0 },
+  tail: { length: 0.38, thickness: 0.03, brush: 1.45, lift: -55, curl: 25, tuft: 0, spikes: 0 },
   horns: { kind: 'none', length: 0.2, thickness: 0.03 },
-  wings: { kind: 'none', span: 0.6, chord: 0.55 },
+  wings: { kind: 'none', span: 0.6, chord: 0.55, walk: false },
   tack: { saddle: false, bridle: false, blanket: false, barding: 'none', leather: '#5a3a24', cloth: '#7a2630', metal: '#b9bcc4' },
   coat: {
     base: '#b9814a',

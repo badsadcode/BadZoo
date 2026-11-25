@@ -100,7 +100,7 @@ function solveLeg(a: Anatomy, pose: Pose, G: Quat[], P: V3[], leg: Leg, tg: LegT
   const toeR = sub(leg.tip, rest(ti));
   const toeQ = qx(tg.toe);
   const toeDir = qRotate(toeQ, toeR);
-  const tip = add(leg.tip, tg.off);
+  const tip = add(leg.stand ?? leg.tip, tg.off);
   const TJ = sub(tip, toeDir);
   // foot segment
   const footR = sub(rest(ti), rest(fi));
@@ -183,6 +183,7 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
   // wings: folded along the body by default, flapped in Fly
   const foldQ: Record<string, Quat[]> = {};
   for (const w of a.wings) {
+    if (w.fingerBones) continue;
     const sx = w.side === 'L' ? 1 : -1;
     const restDir = (i: number) => sub(i < 2 ? a.bones[w.bones[i + 1]].world : w.fingers[0], a.bones[w.bones[i]].world);
     const targets: V3[] = [norm([sx * 0.35, 0.45, -1]), norm([sx * 0.12, -0.2, 1]), norm([sx * 0.08, 0.02, -1])];
@@ -191,6 +192,7 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
   }
   const foldWings = (pose: Pose, breathe = 0) => {
     for (const w of a.wings) {
+      if (w.fingerBones) continue;
       const sx = w.side === 'L' ? 1 : -1;
       w.bones.forEach((b, i) => (pose.local[b] = qMul(foldQ[w.side][i], i === 0 ? qz(sx * breathe * DEG) : QI)));
     }
@@ -202,9 +204,32 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
     rot(pose, 'Ear_R', qz(-Math.sin(t + 0.7) * amt * (1 - droop * 0.5)));
   };
 
-  const finish = (pose: Pose, targets: LegTarget[]) => {
+  // wyverns: fingers fold the membrane up along the forearm, aimed in the live pose so the
+  // fan stays tucked whatever the IK does to the arm
+  const fingerFold = a.wings
+    .filter((w) => w.fingerBones)
+    .map((w) => {
+      const [, fore, hand] = w.bones;
+      const wr = a.bones[hand].world;
+      return { w, fore, hand, rest: w.fingers.map((f) => sub(f, wr)), sx: w.side === 'L' ? 1 : -1 };
+    });
+  const finish = (pose: Pose, targets: LegTarget[], flying = false) => {
     const { G, P } = fk(a, pose);
-    a.legs.forEach((leg, i) => solveLeg(a, pose, G, P, leg, targets[i]));
+    a.legs.forEach((leg, i) => {
+      if (flying && leg.wing) return; // wing-arms are flapping, not walking
+      solveLeg(a, pose, G, P, leg, targets[i]);
+    });
+    if (!flying && fingerFold.length) {
+      const g2 = fk(a, pose);
+      for (const { w, fore, hand, rest, sx } of fingerFold) {
+        const up = norm(sub(g2.P[fore], g2.P[hand]));
+        w.fingerBones!.forEach((fb, i) => {
+          const want = norm(add(up, [sx * (0.2 + 0.05 * i), 0.7 + 0.15 * i, -0.55 - 0.25 * i]));
+          const gF = frameRot(rest[i], [0, 1, 0], want, [sx, 0, 0]);
+          pose.local[fb] = qMul(qConj(g2.G[hand]), gF);
+        });
+      }
+    }
     return pose;
   };
 
@@ -348,7 +373,7 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
         trunk(pose, w, 5);
         return finish(pose, a.legs.map((l): LegTarget => (l.front
           ? { off: [0, legLen * 0.42, -legLen * 0.3], toe: 30 * DEG, foot: 75 * DEG }
-          : { off: [0, legLen * 0.35, -legLen * 0.5], toe: 30 * DEG, foot: 40 * DEG })));
+          : { off: [0, legLen * 0.35, -legLen * 0.5], toe: 30 * DEG, foot: 40 * DEG })), true);
       },
     });
   }

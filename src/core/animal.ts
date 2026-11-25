@@ -185,7 +185,7 @@ export function generateAnimal(recipe: AnimalRecipe, opts: { clips?: boolean } =
     // ── textured: unwrap, bake, then build the mesh with UVs
     const S = rc.mesh.texture;
     lap('skin');
-    uw = unwrap(low, skin, anat, { texSize: S, slots: anat.eyes.length });
+    uw = unwrap(low, skin, anat, { texSize: S, slots: anat.eyes.filter((e) => !e.painted).length });
     lap('unwrap');
     texture = bakeTexture(low, uw, anat, grid, ctx, S);
     lap('bake');
@@ -428,7 +428,7 @@ function eyeMeshTextured(a: Anatomy, slots: [number, number, number][]): MeshOut
   const J: number[] = [];
   const Wt: number[] = [];
   const I: number[] = [];
-  a.eyes.forEach((e, ei) => {
+  a.eyes.filter((e) => !e.painted).forEach((e, ei) => {
     const z = e.look;
     const x = norm(cross([0, 1, 0], z));
     const y = cross(z, x);
@@ -504,6 +504,7 @@ function eyeMesh(a: Anatomy, rc: AnimalRecipe, slots?: [number, number, number][
   const sclera = hexRgb('#2b211c').map(srgbToLinear) as RGB;
   const glint: RGB = [0.9, 0.9, 0.9];
   for (const e of a.eyes) {
+    if (e.painted) continue;
     const z = e.look;
     const x = norm(cross([0, 1, 0], z));
     const y = cross(z, x);

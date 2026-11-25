@@ -112,25 +112,28 @@ function membrane(bd: Builder, wing: Wing, S: number, col: RGB, boneCol: RGB, ch
   const wJ1 = blendW([one(arm), 0.5], [one(fore), 0.5]);
   const wJ2 = blendW([one(fore), 0.3], [one(hand), 0.7]);
   const wF = one(hand);
+  const fb = wing.fingerBones;
+  const wFi = (i: number): W => (fb ? one(fb[Math.min(i, fb.length - 1)]) : wF);
   const wA = blendW([one(wing.anchorBone), 0.6], [one(hips), 0.4]);
   const sag: V3 = [0, -S * 0.025, 0];
   // scalloped trailing edge: the membrane between two finger tips is pulled in toward the wrist
   const scallop = (p: V3, q: V3, toward: V3, k: number) => lerp3(lerp3(p, q, 0.5), toward, k);
   for (let i = 0; i < F.length - 1; i++) {
     const M = scallop(F[i], F[i + 1], J2, 0.28);
-    const wM = blendW([wF, 0.8], [wJ2, 0.2]);
-    bd.tri(J2, F[i], M, wJ2, wF, wM, col);
-    bd.tri(J2, M, F[i + 1], wJ2, wM, wF, col);
+    const wM = blendW([wFi(i), 0.4], [wFi(i + 1), 0.4], [wJ2, 0.2]);
+    bd.tri(J2, F[i], M, wJ2, wFi(i), wM, col);
+    bd.tri(J2, M, F[i + 1], wJ2, wM, wFi(i + 1), col);
   }
   const M3 = scallop(F[F.length - 1], wing.anchor, J1, 0.3);
-  const wM3 = blendW([wJ1, 0.4], [wF, 0.3], [wA, 0.3]);
+  const last = wFi(F.length - 1);
+  const wM3 = blendW([wJ1, 0.4], [last, 0.3], [wA, 0.3]);
   void sag;
-  bd.tri(J1, J2, F[F.length - 1], wJ1, wJ2, wF, col);
-  bd.tri(J1, F[F.length - 1], M3, wJ1, wF, wM3, col);
+  bd.tri(J1, J2, F[F.length - 1], wJ1, wJ2, last, col);
+  bd.tri(J1, F[F.length - 1], M3, wJ1, last, wM3, col);
   bd.tri(J1, M3, wing.anchor, wJ1, wM3, wA, col);
   bd.tri(J1, wing.anchor, J0, wJ1, wA, wJ0, col);
   // finger bones
-  for (const f of F) bd.rod(J2, f, S * 0.014, wF, boneCol);
+  F.forEach((f, i) => bd.rod(J2, f, S * 0.014, wFi(i), boneCol));
   // a thumb claw at the wrist
   bd.rod(J2, add(J2, scale(norm(add(sub(J2, J1), [0, 0.4 * S, 0])), S * 0.06)), S * 0.012, wF, boneCol);
 }

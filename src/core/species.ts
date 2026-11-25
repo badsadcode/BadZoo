@@ -457,6 +457,36 @@ export const SPECIES: Record<string, SpeciesDef> = {
       mesh: { tris: 1800 },
     },
   },
+  wyvern: {
+    label: 'Wyvern', emoji: '🦇', category: 'fantasy', base: 'dragon',
+    patch: {
+      name: 'Skarr',
+      body: { length: 1.5, chestDepth: 0.85, chestWidth: 0.4, rumpWidth: 0.34, shoulders: 1.5, haunch: 1.45, spines: 0.16, spineCount: 18 },
+      legs: { front: 1.0, hind: 1.05, thickness: 0.17 },
+      neck: { length: 1.0, thickness: 0.2, angle: 30 },
+      head: { size: 0.27, muzzleLength: 0.42, muzzleSquare: 0.35, muzzleFlat: 0.3, teeth: 0.7, stop: 0.75, brow: 1.8 },
+      eyes: { style: 'socket', lids: 0.35 },
+      horns: { kind: 'dragon', length: 0.6 },
+      wings: { kind: 'membrane', span: 3.4, chord: 0.62, walk: true },
+      tail: { length: 2.6, thickness: 0.26, spikes: 0.8 },
+      coat: { base: '#4a5a3a', belly: '#c7b98a', patternColor: '#2c3a22', wing: '#3e4a30', spine: '#2a2a22' },
+    },
+  },
+  ironwing: {
+    label: 'Ironwing Drake', emoji: '🛡️', category: 'fantasy', base: 'wyvern',
+    patch: {
+      name: 'Bulwark',
+      scale: 1.1,
+      body: { chestDepth: 0.95, chestWidth: 0.46, rumpWidth: 0.38, shoulders: 1.7, haunch: 1.5, spines: 0.32, spineCount: 14 },
+      legs: { thickness: 0.2, footSize: 1.25 },
+      neck: { length: 0.8, thickness: 0.25, angle: 24 },
+      head: { size: 0.3, muzzleLength: 0.38, muzzleWidth: 0.17, muzzleDepth: 0.16, muzzleSquare: 0.7, muzzleFlat: 0.45, teeth: 1, brow: 2, headWidth: 1.2, flews: 0.2 },
+      eyes: { color: '#ffd23a', glow: true, style: 'socket', lids: 0.45 },
+      horns: { kind: 'dragon', length: 0.75, thickness: 0.11 },
+      tail: { length: 2.2, thickness: 0.3, spikes: 1 },
+      coat: { base: '#6b4a34', belly: '#3e3a3a', countershade: 0.4, pattern: 'scales', patternColor: '#3a2618', patternAmount: 0.7, patternScale: 1.4, wing: '#7a3a22', spine: '#5a3a26', horn: '#a88a6a' },
+    },
+  },
   griffin: {
     label: 'Griffin', emoji: '🦅', category: 'fantasy',
     patch: {
@@ -579,6 +609,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
   dragonmount: {
     label: 'Dragon Rider', emoji: '🔥', category: 'mount', base: 'dragon',
     patch: { name: 'Smoulder', tack: { saddle: true, bridle: true, blanket: true, barding: 'none', cloth: '#1e1e28', leather: '#3a2418' } },
+  },
+  wyvernrider: {
+    label: 'Wyvern Rider', emoji: '🪂', category: 'mount', base: 'ironwing',
+    patch: { name: 'Thunderhide', tack: { saddle: true, bridle: true, blanket: true, barding: 'leather', leather: '#3a2418', cloth: '#5a1e1e' } },
   },
   warboar: {
     label: 'War Boar', emoji: '⚔️', category: 'mount', base: 'boar',

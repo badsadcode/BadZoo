@@ -111,6 +111,7 @@ export function bakeTexture(m: TriMesh, uw: Unwrap, a: Anatomy, g: Grid, ctx: Pa
         if (head) {
           // eye rims: a darkened version of the local coat (never the nose colour: pink rims = haunted)
           for (const e of a.eyes) {
+            if (e.painted) continue;
             const d = Math.hypot(p[0] - e.c[0], p[1] - e.c[1], p[2] - e.c[2]) / e.r;
             if (d < 1.45) col = mix(col, col.map((c) => c * 0.18) as RGB, 0.9 * clamp((1.45 - d) / 0.18) * clamp((d - 0.85) / 0.1));
           }
@@ -119,6 +120,26 @@ export function bakeTexture(m: TriMesh, uw: Unwrap, a: Anatomy, g: Grid, ctx: Pa
             const w = hs * 0.035;
             const gap = Math.abs(dMuzzle - dJaw);
             if (gap < w && n[1] < 0.35) col = mix(col, col.map((c) => c * 0.25) as RGB, 0.75 * (1 - gap / w));
+          }
+        }
+        // painted eyes: drawn straight onto the face, with the upper lid cutting across the top
+        if (head) {
+          for (const e of a.eyes) {
+            if (!e.painted) continue;
+            const v: V3 = [p[0] - e.surf[0], p[1] - e.surf[1], p[2] - e.surf[2]];
+            const z = e.look;
+            let xa: V3 = [z[2], 0, -z[0]];
+            const xl = Math.hypot(...xa) || 1;
+            xa = [xa[0] / xl, xa[1] / xl, xa[2] / xl];
+            const ya: V3 = [z[1] * xa[2] - z[2] * xa[1], z[2] * xa[0] - z[0] * xa[2], z[0] * xa[1] - z[1] * xa[0]];
+            const R = e.r * 1.05;
+            const lx = (v[0] * xa[0] + v[1] * xa[1] + v[2] * xa[2]) / R;
+            const ly = (v[0] * ya[0] + v[1] * ya[1] + v[2] * ya[2]) / R;
+            const rr = Math.hypot(lx, ly);
+            if (rr > 1.15 || n[0] * z[0] + n[1] * z[1] + n[2] * z[2] < 0.1) continue;
+            const lidY = 0.95 - 1.15 * e.lids;
+            if (rr < 0.9 && ly < lidY) col = paintEye(lx / 0.9, ly / 0.9, hexRgb(rc.eyes.color), rc.eyes.pupil);
+            else if (rr < 1.15 && ly < lidY + 0.18) col = mix(col, col.map((c) => c * 0.15) as RGB, 0.9 * clamp((1.15 - rr) / 0.15));
           }
         }
         if (reg === 'nose') {
@@ -154,7 +175,7 @@ export function bakeTexture(m: TriMesh, uw: Unwrap, a: Anatomy, g: Grid, ctx: Pa
 
   // ── eyes: painted into their reserved squares
   uw.slots.forEach(([u0, v0, sz], i) => {
-    if (i >= a.eyes.length) return;
+    if (i >= a.eyes.filter((e) => !e.painted).length) return;
     const iris = hexRgb(rc.eyes.color);
     const X0 = Math.floor(u0 * S);
     const Y0 = Math.floor(v0 * S);
