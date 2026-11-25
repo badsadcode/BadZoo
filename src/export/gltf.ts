@@ -132,6 +132,13 @@ export function buildGltf(an: Animal, opts: GltfOptions = {}): { json: any; bin:
     json.textures = [{ sampler: 0, source: 0 }];
     json.materials[0].pbrMetallicRoughness.baseColorTexture = { index: 0 };
     json.materials[1].pbrMetallicRoughness.baseColorTexture = { index: 0 };
+    if (an.texture.emissive) {
+      // bioluminescence: an emissive map on the coat (engines scale it with their emission energy)
+      json.images.push({ name: 'Glow', mimeType: 'image/png', bufferView: bb.view(encodePng({ size: an.texture.size, rgba: an.texture.emissive })) });
+      json.textures.push({ sampler: 0, source: 1 });
+      json.materials[0].emissiveTexture = { index: 1 };
+      json.materials[0].emissiveFactor = [1, 1, 1];
+    }
   }
   json.materials.push({ name: 'Wings', doubleSided: true, pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 0.85 } });
   const prim = (m: MeshOut, material: number) => {

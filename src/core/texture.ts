@@ -10,7 +10,7 @@ import { zlibSync } from 'fflate';
 import type { Anatomy } from './anatomy';
 import { clamp, V3 } from './math';
 import type { TriMesh } from './mesher';
-import { hexRgb, mix, Owner, paintFacet, PaintContext, RGB } from './paint';
+import { hexRgb, mix, Owner, paintFacet, paintGlow, PaintContext, RGB } from './paint';
 import { gridGrad } from './remesh';
 import { Grid, noise3, Prim, primBounds, primDist } from './sdf';
 import type { Unwrap } from './uv';
@@ -18,6 +18,8 @@ import type { Unwrap } from './uv';
 export interface Texture {
   size: number;
   rgba: Uint8Array;
+  /** emissive map (bioluminescence, lures), when anything glows */
+  emissive?: Uint8Array;
 }
 
 function candidates(prims: Prim[], bounds: { min: V3; max: V3 }[], mn: V3, mx: V3, pad: number): Prim[] {
@@ -56,6 +58,9 @@ export function bakeTexture(m: TriMesh, uw: Unwrap, a: Anatomy, g: Grid, ctx: Pa
   const S = size;
   const rgb = new Float32Array(S * S * 3);
   const filled = new Uint8Array(S * S);
+  const glowCol = hexRgb(rc.coat.glow || '#bff8ee');
+  const anyGlow = !!rc.coat.glow || a.prims.some((p) => p.region === 'lure');
+  const glow = anyGlow ? new Float32Array(S * S) : null;
   const prims = a.prims;
   const bounds = prims.map(primBounds);
   const nV = m.pos.length / 3;
@@ -166,6 +171,12 @@ export function bakeTexture(m: TriMesh, uw: Unwrap, a: Anatomy, g: Grid, ctx: Pa
           const k = 1 + f * 0.09 * C.jitter;
           col = [clamp(col[0] * k), clamp(col[1] * k), clamp(col[2] * k)];
         }
+        if (glow) {
+          const gv = paintGlow(ctx, p, n, o);
+          glow[idx] = gv;
+          // glowing parts are pale in daylight too
+          if (gv > 0) col = mix(col, [Math.min(1, glowCol[0] * 0.6 + 0.4), Math.min(1, glowCol[1] * 0.6 + 0.4), Math.min(1, glowCol[2] * 0.6 + 0.4)], gv * 0.6);
+        }
         rgb[idx * 3] = col[0];
         rgb[idx * 3 + 1] = col[1];
         rgb[idx * 3 + 2] = col[2];
@@ -211,6 +222,7 @@ export function bakeTexture(m: TriMesh, uw: Unwrap, a: Anatomy, g: Grid, ctx: Pa
         rgb[idx * 3] = r / c;
         rgb[idx * 3 + 1] = gg / c;
         rgb[idx * 3 + 2] = b / c;
+        if (glow) glow[idx] = Math.max(x > 0 ? glow[idx - 1] : 0, x < S - 1 ? glow[idx + 1] : 0, y > 0 ? glow[idx - S] : 0, y < S - 1 ? glow[idx + S] : 0);
         filled[idx] = 1;
         fresh[idx] = 1;
       }
@@ -222,7 +234,17 @@ export function bakeTexture(m: TriMesh, uw: Unwrap, a: Anatomy, g: Grid, ctx: Pa
     rgba[i * 4 + 2] = Math.round(clamp(rgb[i * 3 + 2]) * 255);
     rgba[i * 4 + 3] = 255;
   }
-  return { size: S, rgba };
+  let emissive: Uint8Array | undefined;
+  if (glow) {
+    emissive = new Uint8Array(S * S * 4);
+    for (let i = 0; i < S * S; i++) {
+      emissive[i * 4] = Math.round(clamp(glowCol[0] * glow[i]) * 255);
+      emissive[i * 4 + 1] = Math.round(clamp(glowCol[1] * glow[i]) * 255);
+      emissive[i * 4 + 2] = Math.round(clamp(glowCol[2] * glow[i]) * 255);
+      emissive[i * 4 + 3] = 255;
+    }
+  }
+  return { size: S, rgba, emissive };
 }
 
 /** eye texture: (lx, ly) in -1..1 across the front of the eyeball */

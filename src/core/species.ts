@@ -7,7 +7,7 @@ import { AnimalRecipe, BASE, mergeRecipe } from './recipe';
 
 type Patch = Parameters<typeof mergeRecipe>[1];
 
-export type Category = 'real' | 'breeds' | 'fantasy' | 'mount';
+export type Category = 'real' | 'breeds' | 'birds' | 'sea' | 'abyss' | 'fantasy' | 'mount';
 interface SpeciesDef {
   label: string;
   emoji: string;
@@ -878,6 +878,372 @@ export const SPECIES: Record<string, SpeciesDef> = {
       coat: { base: '#b0682e', belly: '#c47a3a', pattern: 'solid', mane: '#efd9a6', tail: '#efd9a6', blaze: true, socks: 0.45, sockColor: '#f3ead8', feather: '#efd9a6' },
     },
   },
+
+  // ─────────────────────────────────────────────────────────── birds ──
+  chicken: {
+    label: 'Chicken', emoji: '🐓', category: 'birds',
+    patch: {
+      name: 'Colonel', plan: 'biped',
+      body: { length: 0.2, chestDepth: 0.2, chestWidth: 0.09, rumpWidth: 0.08, waist: 1.0, shoulders: 0.6, haunch: 0.9 },
+      legs: { front: 0.3, hind: 0.2, thickness: 0.016, stance: 'digitigrade', foot: 'talon', footSize: 1 },
+      neck: { length: 0.1, thickness: 0.035, angle: 70 },
+      head: { size: 0.035, muzzleLength: 0.025, muzzleWidth: 0.012, muzzleDepth: 0.014, muzzleTaper: 0.4, pitch: 0, nose: 'beak', beakHook: 0.35, crest: 0.9, cheeks: 0.8, brow: 0.5 },
+      eyes: { size: 0.007, angle: 70, color: '#d8901a', style: 'ball', lids: 0.1 },
+      ears: { length: 0 },
+      wings: { kind: 'feathered', span: 0.28, chord: 0.6 },
+      tail: { length: 0.08, thickness: 0.02, lift: 40, curl: 0, fan: 0.8 },
+      coat: { base: '#c45a22', belly: '#a8481a', countershade: 0.2, pattern: 'solid', beak: '#e8b84a', hoof: '#e8b84a', socks: 0.55, sockColor: '#e8b84a', wing: '#8a3a16', tail: '#1e2a22', patternColor: '#0e1410', jitter: 0.4 },
+    },
+  },
+
+  duck: {
+    label: 'Duck', emoji: '🦆', category: 'birds', base: 'chicken',
+    patch: {
+      name: 'Quackers',
+      body: { length: 0.26, chestDepth: 0.17, chestWidth: 0.1, rumpWidth: 0.09 },
+      legs: { front: 0.22, hind: 0.1, thickness: 0.014, foot: 'webbed', footSize: 1.2 },
+      neck: { length: 0.1, thickness: 0.04, angle: 60 },
+      head: { size: 0.036, muzzleLength: 0.045, muzzleWidth: 0.022, muzzleDepth: 0.009, muzzleTaper: 1.0, beakHook: 0, crest: 0 },
+      wings: { span: 0.36 },
+      tail: { length: 0.05, lift: 25, fan: 0.3 },
+      coat: { base: '#8a7058', belly: '#bfae95', countershade: 0.4, pattern: 'split', patternColor: '#1f5a3c', patternAmount: 0.0, beak: '#e8c43a', hoof: '#ea8a2a', sockColor: '#ea8a2a', wing: '#6a5644', tail: '#2a2622' },
+    },
+  },
+  swan: {
+    label: 'Swan', emoji: '🦢', category: 'birds', base: 'duck',
+    patch: {
+      name: 'Odette', scale: 1.6,
+      body: { length: 0.3, chestDepth: 0.2, chestWidth: 0.11 },
+      neck: { length: 0.3, thickness: 0.032, angle: 78 },
+      head: { pitch: 30, muzzleDepth: 0.012 },
+      coat: { base: '#f4f2ee', belly: '#f4f2ee', countershade: 0, pattern: 'solid', beak: '#e8622a', hoof: '#2a2626', sockColor: '#2a2626', wing: '#f4f2ee', tail: '#f4f2ee' },
+    },
+  },
+  penguin: {
+    label: 'Penguin', emoji: '🐧', category: 'birds',
+    patch: {
+      name: 'Pingu', plan: 'biped',
+      body: { length: 0.14, chestDepth: 0.36, chestWidth: 0.16, rumpWidth: 0.15, waist: 1.05, shoulders: 0.6 },
+      legs: { front: 0.55, hind: 0.1, thickness: 0.03, foot: 'webbed', footSize: 1.3 },
+      neck: { length: 0.04, thickness: 0.09, angle: 85 },
+      head: { size: 0.07, muzzleLength: 0.05, muzzleWidth: 0.014, muzzleDepth: 0.016, muzzleTaper: 0.5, pitch: 10, nose: 'beak', beakHook: 0.15, cheeks: 0.9, brow: 0.4 },
+      eyes: { size: 0.008, angle: 60, color: '#1a1410' },
+      ears: { length: 0 },
+      wings: { kind: 'flipper', span: 0.5, chord: 0.5 },
+      tail: { length: 0.05, thickness: 0.03, lift: -60, curl: 0 },
+      coat: { base: '#1c1e24', belly: '#f2f0ea', countershade: 0.5, pattern: 'solid', beak: '#1c1e24', hoof: '#2a2a2e', muzzle: '', wing: '#1c1e24', earInner: '#1c1e24' },
+    },
+  },
+  eagle: {
+    label: 'Eagle', emoji: '🦅', category: 'birds',
+    patch: {
+      name: 'Liberty', plan: 'biped',
+      body: { length: 0.32, chestDepth: 0.26, chestWidth: 0.12, rumpWidth: 0.1, waist: 0.9 },
+      legs: { front: 0.45, hind: 0.24, thickness: 0.022, foot: 'talon', footSize: 1.5 },
+      neck: { length: 0.08, thickness: 0.05, angle: 55 },
+      head: { size: 0.05, muzzleLength: 0.04, muzzleWidth: 0.016, muzzleDepth: 0.022, muzzleTaper: 0.5, pitch: 5, nose: 'beak', beakHook: 1, brow: 1.6, cheeks: 0.8 },
+      eyes: { size: 0.009, angle: 35, color: '#e0b020', style: 'socket', lids: 0.35 },
+      ears: { length: 0 },
+      wings: { kind: 'feathered', span: 1.0, chord: 0.62 },
+      tail: { length: 0.08, thickness: 0.03, lift: -10, curl: 0, fan: 0.55 },
+      coat: { base: '#4a3220', belly: '#3e2a1a', countershade: 0.2, pattern: 'split', patternColor: '#f4f0e8', patternAmount: 0.22, beak: '#e8b830', hoof: '#e8b830', socks: 0.45, sockColor: '#e8b830', wing: '#3e2a1a', tail: '#f4f0e8' },
+    },
+  },
+  owl: {
+    label: 'Owl', emoji: '🦉', category: 'birds',
+    patch: {
+      name: 'Hedwig', plan: 'biped',
+      body: { length: 0.16, chestDepth: 0.3, chestWidth: 0.14, rumpWidth: 0.12, waist: 1.05 },
+      legs: { front: 0.5, hind: 0.13, thickness: 0.02, foot: 'talon', footSize: 1.2 },
+      neck: { length: 0.03, thickness: 0.08, angle: 85 },
+      head: { size: 0.085, muzzleLength: 0.012, muzzleWidth: 0.012, muzzleDepth: 0.016, muzzleTaper: 0.5, pitch: 25, nose: 'beak', beakHook: 0.9, headWidth: 1.2, dome: -0.3, brow: 1.2, cheeks: 1.3 },
+      eyes: { size: 0.019, angle: 12, color: '#f0a020', style: 'socket', lids: 0.25 },
+      ears: { length: 0.035, width: 0.03, tip: 1, spread: 15, tilt: 10, side: 0.25 },
+      wings: { kind: 'feathered', span: 0.5, chord: 0.62 },
+      tail: { length: 0.05, thickness: 0.03, lift: -40, curl: 0, fan: 0.3 },
+      coat: { base: '#8a6a48', belly: '#d8c4a4', countershade: 0.55, pattern: 'spots', patternColor: '#4a3624', patternAmount: 0.25, patternScale: 0.4, beak: '#3a3230', hoof: '#3a3230', wing: '#7a5a3c', tail: '#7a5a3c', eyePatch: '#e8dcc0' },
+    },
+  },
+  parrot: {
+    label: 'Macaw', emoji: '🦜', category: 'birds', base: 'eagle',
+    patch: {
+      name: 'Polly', scale: 0.8,
+      body: { length: 0.22, chestDepth: 0.2, chestWidth: 0.09 },
+      legs: { front: 0.38, hind: 0.15 },
+      head: { size: 0.05, muzzleLength: 0.03, muzzleDepth: 0.03, beakHook: 1, brow: 0.8 },
+      eyes: { color: '#f2e6c8', size: 0.007, style: 'ball' },
+      wings: { span: 0.55 },
+      tail: { length: 0.1, lift: -30, fan: 0.95 },
+      coat: { base: '#d8262a', belly: '#d8262a', countershade: 0, pattern: 'solid', beak: '#2a2626', hoof: '#4a4444', socks: 0.4, sockColor: '#4a4444', wing: '#1e5ad8', tail: '#d8262a', patternColor: '#f0c020', eyePatch: '#f6f2ea' },
+    },
+  },
+  flamingo: {
+    label: 'Flamingo', emoji: '🦩', category: 'birds', base: 'duck',
+    patch: {
+      name: 'Rosie', scale: 1.0,
+      body: { length: 0.3, chestDepth: 0.2, chestWidth: 0.1 },
+      legs: { front: 0.85, hind: 0.7, thickness: 0.012 },
+      neck: { length: 0.45, thickness: 0.025, angle: 80 },
+      head: { size: 0.04, muzzleLength: 0.07, muzzleWidth: 0.014, muzzleDepth: 0.018, muzzleTaper: 0.7, muzzleDrop: 0.8, pitch: 40, beakHook: 0.5 },
+      coat: { base: '#f28aa0', belly: '#f6a8b8', pattern: 'solid', beak: '#2a2222', hoof: '#e86a88', sockColor: '#e86a88', socks: 0.7, wing: '#e8607a', tail: '#f28aa0' },
+    },
+  },
+  ostrich: {
+    label: 'Ostrich', emoji: '🪶', category: 'birds',
+    patch: {
+      name: 'Speedy', plan: 'biped',
+      body: { length: 0.75, chestDepth: 0.55, chestWidth: 0.28, rumpWidth: 0.24, waist: 0.95 },
+      legs: { front: 1.25, hind: 1.0, thickness: 0.06, foot: 'talon', footSize: 1.6 },
+      neck: { length: 0.85, thickness: 0.05, angle: 80 },
+      head: { size: 0.07, muzzleLength: 0.06, muzzleWidth: 0.03, muzzleDepth: 0.014, muzzleTaper: 0.9, pitch: 10, nose: 'beak', beakHook: 0.1, brow: 0.6 },
+      eyes: { size: 0.02, angle: 60, color: '#3a2618', style: 'socket', lids: 0.4 },
+      ears: { length: 0 },
+      wings: { kind: 'feathered', span: 0.6, chord: 0.6 },
+      tail: { length: 0.1, thickness: 0.08, lift: -20, curl: 0, fan: 0.4 },
+      coat: { base: '#1c1a1a', belly: '#1c1a1a', countershade: 0, pattern: 'solid', beak: '#c8a080', hoof: '#c8a080', socks: 0.75, sockColor: '#d8a090', wing: '#f2eee6', tail: '#f2eee6', muzzle: '' },
+    },
+  },
+  pigeon: {
+    label: 'Pigeon', emoji: '🕊️', category: 'birds', base: 'chicken',
+    patch: {
+      name: 'Gerald', scale: 0.7,
+      body: { length: 0.2, chestDepth: 0.15, chestWidth: 0.08 },
+      legs: { front: 0.2, hind: 0.1, thickness: 0.012 },
+      neck: { length: 0.05, thickness: 0.035, angle: 55 },
+      head: { size: 0.028, muzzleLength: 0.02, muzzleWidth: 0.008, muzzleDepth: 0.008, beakHook: 0.2, crest: 0 },
+      eyes: { color: '#e8701a' },
+      wings: { span: 0.32 },
+      tail: { lift: -10, fan: 0.4 },
+      coat: { base: '#8a909a', belly: '#9aa0aa', countershade: 0.2, pattern: 'split', patternColor: '#4a6a62', patternAmount: 0.1, beak: '#2a2626', hoof: '#d86a6a', sockColor: '#d86a6a', wing: '#9aa0a8', tail: '#5a5e66' },
+    },
+  },
+
+  // ───────────────────────────────────────────────────────────── sea ──
+  goldfish: {
+    label: 'Goldfish', emoji: '🐠', category: 'sea',
+    patch: {
+      name: 'Bubbles', plan: 'swimmer',
+      body: { length: 0.1, chestDepth: 0.08, chestWidth: 0.03, rumpWidth: 0.03, waist: 1, arch: 0.005 },
+      neck: { length: 0.005, thickness: 0.03, angle: 0 },
+      head: { size: 0.03, muzzleLength: 0.01, muzzleWidth: 0.014, muzzleDepth: 0.014, muzzleTaper: 0.8, pitch: 0, cheeks: 0.9, brow: 0.3, nose: 'broad', noseSize: 0.3 },
+      eyes: { size: 0.009, angle: 80, color: '#1a1410', style: 'ball', lids: 0 },
+      ears: { length: 0 },
+      tail: { length: 0.06, thickness: 0.018, brush: 1, lift: 0, curl: 0 },
+      fins: { dorsal: 0.04, pectoral: 0.025, pelvic: 0.02, anal: 0.02, tail: 'vertical', tailSize: 0.06 },
+      coat: { base: '#f08a1a', belly: '#f6c070', countershade: 0.5, pattern: 'solid', fin: '#f6a040', nose: '#e07a1a', jitter: 0.3 },
+    },
+  },
+  clownfish: {
+    label: 'Clownfish', emoji: '🐠', category: 'sea', base: 'goldfish',
+    patch: {
+      name: 'Nemo',
+      coat: { base: '#f06a1a', belly: '#f6904a', pattern: 'stripes', patternColor: '#f8f6f2', patternAmount: 0.2, patternScale: 1.6, fin: '#1a1414' },
+    },
+  },
+  trout: {
+    label: 'Trout', emoji: '🐟', category: 'sea', base: 'goldfish',
+    patch: {
+      name: 'Rainbow', scale: 3.5,
+      body: { length: 0.14, chestDepth: 0.06, chestWidth: 0.028 },
+      head: { size: 0.03, muzzleLength: 0.02, muzzleTaper: 0.6 },
+      eyes: { size: 0.006 },
+      tail: { length: 0.08, thickness: 0.016 },
+      fins: { dorsal: 0.025, pectoral: 0.02, pelvic: 0.015, anal: 0.018, tailSize: 0.045 },
+      coat: { base: '#6a7a52', belly: '#e8e4d8', countershade: 0.55, pattern: 'spots', patternColor: '#2a2a22', patternAmount: 0.15, patternScale: 0.3, fin: '#9a9a7a' },
+    },
+  },
+  shark: {
+    label: 'Shark', emoji: '🦈', category: 'sea',
+    patch: {
+      name: 'Bruce', plan: 'swimmer',
+      body: { length: 2.0, chestDepth: 0.85, chestWidth: 0.42, rumpWidth: 0.4, arch: 0.04 },
+      neck: { length: 0.05, thickness: 0.4, angle: 0 },
+      head: { size: 0.36, muzzleLength: 0.42, muzzleWidth: 0.2, muzzleDepth: 0.18, muzzleTaper: 0.45, muzzleDrop: -0.1, pitch: 0, cheeks: 1.0, brow: 0.3, nose: 'broad', noseSize: 0.3, teeth: 0.5 },
+      eyes: { size: 0.035, angle: 75, color: '#0a0a0c', style: 'ball', lids: 0 },
+      ears: { length: 0 },
+      tail: { length: 1.4, thickness: 0.3, brush: 1, lift: 0, curl: 0 },
+      fins: { dorsal: 0.65, pectoral: 0.75, pelvic: 0.22, anal: 0.16, tail: 'vertical', tailSize: 0.95 },
+      coat: { base: '#6a7680', belly: '#eef0f0', countershade: 0.6, pattern: 'solid', nose: '#5a6670', jitter: 0.35 },
+      mesh: { tris: 1500 },
+    },
+  },
+  dolphin: {
+    label: 'Dolphin', emoji: '🐬', category: 'sea', base: 'shark',
+    patch: {
+      name: 'Flipper',
+      body: { length: 1.35, chestDepth: 0.36, chestWidth: 0.19, arch: 0.02 },
+      neck: { length: 0.04, thickness: 0.15, angle: 0 },
+      head: { size: 0.125, muzzleLength: 0.13, muzzleWidth: 0.04, muzzleDepth: 0.04, muzzleTaper: 0.8, muzzleDrop: 0, dome: 0.6, stop: 0.85, teeth: 0 },
+      eyes: { size: 0.018, angle: 80, color: '#1a1410', style: 'socket', lids: 0.15 },
+      tail: { length: 0.8, thickness: 0.18 },
+      fins: { dorsal: 0.3, pectoral: 0.3, pelvic: 0, anal: 0, tail: 'flukes', tailSize: 0.4 },
+      coat: { base: '#5a6a7a', belly: '#d8dde2', countershade: 0.55 },
+    },
+  },
+  orca: {
+    label: 'Orca', emoji: '🐋', category: 'sea', base: 'dolphin',
+    patch: {
+      name: 'Shamu', scale: 3.2,
+      body: { chestDepth: 0.42, chestWidth: 0.24 },
+      head: { muzzleLength: 0.05, muzzleTaper: 0.9, dome: 0.6 },
+      fins: { dorsal: 0.45, pectoral: 0.32, tailSize: 0.42 },
+      coat: { base: '#141618', belly: '#f2f2ee', countershade: 0.65, eyePatch: '#f2f2ee' },
+    },
+  },
+  humpback: {
+    label: 'Humpback', emoji: '🐳', category: 'sea', base: 'dolphin',
+    patch: {
+      name: 'Migaloo', scale: 6,
+      body: { length: 1.2, chestDepth: 0.5, chestWidth: 0.3, belly: 0.4 },
+      neck: { length: 0.05, thickness: 0.24, angle: 0 },
+      head: { size: 0.3, muzzleLength: 0.35, muzzleWidth: 0.16, muzzleDepth: 0.1, muzzleTaper: 0.85, dome: -0.4, stop: 0.2, jaw: 1.3 },
+      eyes: { size: 0.014, lids: 0.35 },
+      tail: { length: 0.75, thickness: 0.15 },
+      fins: { dorsal: 0.06, pectoral: 0.65, tail: 'flukes', tailSize: 0.42 },
+      coat: { base: '#2a3038', belly: '#d8dade', countershade: 0.45, pattern: 'spots', patternColor: '#e8eaee', patternAmount: 0.05, patternScale: 0.6 },
+    },
+  },
+  manta: {
+    label: 'Manta Ray', emoji: '🪁', category: 'sea',
+    patch: {
+      name: 'Glide', plan: 'swimmer',
+      body: { length: 0.9, chestDepth: 0.3, chestWidth: 0.55, rumpWidth: 0.4, arch: 0 },
+      neck: { length: 0.02, thickness: 0.2, angle: 0 },
+      head: { size: 0.22, muzzleLength: 0.05, muzzleWidth: 0.25, muzzleDepth: 0.06, muzzleTaper: 1.0, pitch: 0, brow: 0.2, cheeks: 0.6, nose: 'broad', noseSize: 0.2 },
+      eyes: { size: 0.03, angle: 85, color: '#0a0a0c', style: 'ball', lids: 0 },
+      ears: { length: 0.18, width: 0.08, tip: 0.3, spread: -10, tilt: -40, droop: 0, side: 0.6 },
+      tail: { length: 1.2, thickness: 0.04, lift: 0, curl: 0 },
+      fins: { dorsal: 0.08, pectoral: 1.6, pelvic: 0.1, anal: 0, tail: 'vertical', tailSize: 0 },
+      coat: { base: '#1c1e24', belly: '#eeeee8', countershade: 0.5, pattern: 'solid', earInner: '#1c1e24' },
+      mesh: { tris: 1200 },
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────── abyss ──
+  anglerfish: {
+    label: 'Anglerfish', emoji: '🎣', category: 'abyss', base: 'goldfish',
+    patch: {
+      name: 'Lantern', scale: 6,
+      body: { length: 0.08, chestDepth: 0.09, chestWidth: 0.07, belly: 0.4, sharp: 0.55, spines: 0.012, spineCount: 9 },
+      head: { size: 0.06, muzzleLength: 0.01, muzzleWidth: 0.05, muzzleDepth: 0.04, muzzleTaper: 1, jaw: 2, teeth: 1, teethCount: 8, lure: 0.09, brow: 1.6 },
+      eyes: { size: 0.006, angle: 55, color: '#c8e8e0', style: 'socket', lids: 0.3, anger: 0.8 },
+      tail: { length: 0.05, thickness: 0.016 },
+      fins: { dorsal: 0.015, pectoral: 0.025, pelvic: 0, anal: 0.012, tailSize: 0.035, spiny: 0.8 },
+      coat: { base: '#2a2422', belly: '#3a302c', countershade: 0.3, pattern: 'scales', patternColor: '#1a1414', patternAmount: 0.5, fin: '#3a2e2a', horn: '#e8e2d0', glow: '#7ff2ff', glowPattern: 'spots', glowAmount: 0.15 },
+    },
+  },
+  viperfish: {
+    label: 'Viperfish', emoji: '🐍', category: 'abyss', base: 'trout',
+    patch: {
+      name: 'Needle', scale: 3,
+      body: { length: 0.16, chestDepth: 0.04, chestWidth: 0.02, sharp: 0.7 },
+      head: { size: 0.025, muzzleLength: 0.016, muzzleWidth: 0.012, muzzleDepth: 0.014, jaw: 1.8, teeth: 1.4, teethCount: 6, brow: 1.4 },
+      eyes: { size: 0.007, color: '#d8f0ff', glow: true, style: 'socket', anger: 0.7 },
+      tail: { length: 0.1, thickness: 0.01 },
+      fins: { dorsal: 0.03, pectoral: 0.012, pelvic: 0.01, anal: 0.012, tailSize: 0.025, spiny: 0.9 },
+      coat: { base: '#162432', belly: '#22384a', countershade: 0.3, pattern: 'solid', fin: '#1a2a38', horn: '#eef4f8', glow: '#4ad8ff', glowPattern: 'both', glowAmount: 0.4 },
+    },
+  },
+  gulper: {
+    label: 'Gulper Eel', emoji: '🕳️', category: 'abyss', base: 'viperfish',
+    patch: {
+      name: 'Pelican', scale: 4,
+      body: { length: 0.06, chestDepth: 0.03, chestWidth: 0.02 },
+      head: { size: 0.035, muzzleLength: 0.05, muzzleWidth: 0.03, muzzleDepth: 0.012, jaw: 2.2, teeth: 0.2 },
+      tail: { length: 0.4, thickness: 0.012 },
+      fins: { dorsal: 0, pectoral: 0.008, pelvic: 0, anal: 0, tailSize: 0.015 },
+      coat: { base: '#0e0e12', belly: '#1a1a20', glow: '#ff4a8a', glowPattern: 'lines', glowAmount: 0.25 },
+    },
+  },
+  goblinshark: {
+    label: 'Goblin Shark', emoji: '👺', category: 'abyss', base: 'shark',
+    patch: {
+      name: 'Mitsukuri', scale: 0.9,
+      body: { length: 1.6, chestDepth: 0.55, chestWidth: 0.3 },
+      head: { size: 0.3, muzzleLength: 0.65, muzzleWidth: 0.12, muzzleDepth: 0.06, muzzleTaper: 0.6, muzzleDrop: -0.35, jaw: 1.6, teeth: 0.9, teethCount: 9 },
+      eyes: { size: 0.025, color: '#1a1414', style: 'socket', anger: 0.6 },
+      fins: { dorsal: 0.3, pectoral: 0.4, pelvic: 0.25, anal: 0.25, tailSize: 0.7 },
+      coat: { base: '#d8a0a0', belly: '#e8c0bc', countershade: 0.3, horn: '#f0ece0' },
+    },
+  },
+  oarfish: {
+    label: 'Oarfish', emoji: '🎏', category: 'abyss', base: 'trout',
+    patch: {
+      name: 'Ribbon', scale: 12,
+      body: { length: 0.14, chestDepth: 0.03, chestWidth: 0.008, spines: 0.02, spineCount: 34 },
+      head: { size: 0.018, muzzleLength: 0.006, muzzleTaper: 0.8 },
+      eyes: { size: 0.005 },
+      tail: { length: 0.7, thickness: 0.012 },
+      fins: { dorsal: 0, pectoral: 0.01, pelvic: 0.02, anal: 0, tailSize: 0.006 },
+      coat: { base: '#c8ccd2', belly: '#e8eaec', countershade: 0.3, pattern: 'spots', patternColor: '#5a6068', patternAmount: 0.1, spine: '#d8282a', fin: '#d8282a' },
+    },
+  },
+  lanternray: {
+    label: 'Lantern Ray', emoji: '🔮', category: 'abyss', base: 'manta',
+    patch: {
+      name: 'Veil', scale: 3,
+      coat: { base: '#2a1e3a', belly: '#3a2e4a', countershade: 0.3, pattern: 'scales', patternColor: '#1a1428', patternAmount: 0.6, glow: '#b48aff', glowPattern: 'lines', glowAmount: 0.6 },
+      eyes: { color: '#e0d0ff', glow: true, style: 'socket', anger: 0.5 },
+      body: { sharp: 0.7 },
+      tail: { spikes: 0.6 },
+    },
+  },
+  leviathan: {
+    label: 'Hadal Leviathan', emoji: '🐉', category: 'abyss',
+    patch: {
+      name: 'The Sounding', plan: 'swimmer', scale: 4,
+      body: { length: 2.2, chestDepth: 0.55, chestWidth: 0.4, rumpWidth: 0.36, arch: 0.05, spines: 0.45, spineCount: 34, sharp: 0.85 },
+      neck: { length: 0.3, thickness: 0.4, angle: 5 },
+      head: { size: 0.4, muzzleLength: 0.65, muzzleWidth: 0.2, muzzleDepth: 0.17, muzzleTaper: 0.55, muzzleSquare: 0.2, pitch: 5, jaw: 1.6, teeth: 1.2, teethCount: 11, brow: 2.2, cheeks: 1.1, stop: 0.9 },
+      eyes: { size: 0.04, angle: 55, color: '#ff3a1a', style: 'socket', lids: 0.4, glow: true, count: 6, anger: 0.9 },
+      ears: { length: 0 },
+      horns: { kind: 'dragon', length: 0.9, thickness: 0.12 },
+      tail: { length: 6, thickness: 0.6, brush: 1, lift: 0, curl: 0, spikes: 0.6 },
+      fins: { dorsal: 0, pectoral: 1.2, pelvic: 0.6, anal: 0, tail: 'vertical', tailSize: 1.3, spiny: 1 },
+      coat: { base: '#1c1416', belly: '#3a2422', countershade: 0.3, pattern: 'scales', patternColor: '#0c0808', patternAmount: 0.7, patternScale: 1.5, spine: '#2a1a1a', horn: '#4a3a34', fin: '#2a1618', glow: '#36e8d8', glowPattern: 'both', glowAmount: 0.35 },
+      mesh: { tris: 2000 },
+    },
+  },
+  dreadmaw: {
+    label: 'Dreadmaw', emoji: '🦷', category: 'abyss',
+    patch: {
+      name: 'Hunger', plan: 'swimmer', scale: 2.5,
+      body: { length: 1.1, chestDepth: 0.5, chestWidth: 0.34, rumpWidth: 0.3, arch: 0.08, spines: 0.22, spineCount: 16, sharp: 0.9 },
+      neck: { length: 0.05, thickness: 0.4, angle: 0 },
+      head: { size: 0.42, muzzleLength: 0.3, muzzleWidth: 0.3, muzzleDepth: 0.2, muzzleTaper: 0.8, muzzleSquare: 0.6, muzzleFlat: 0.4, pitch: -4, jaw: 2.1, teeth: 1.3, teethCount: 12, brow: 2.4, cheeks: 1.3, headWidth: 1.2, lure: 0.25 },
+      eyes: { size: 0.035, angle: 50, color: '#f2f04a', style: 'socket', lids: 0.35, glow: true, count: 4, anger: 1 },
+      ears: { length: 0 },
+      horns: { kind: 'dragon', length: 0.35, thickness: 0.07 },
+      tail: { length: 0.9, thickness: 0.22, lift: 0, curl: 0, spikes: 0.8 },
+      fins: { dorsal: 0, pectoral: 0.55, pelvic: 0.3, anal: 0.25, tail: 'vertical', tailSize: 0.7, spiny: 1 },
+      coat: { base: '#1a1c22', belly: '#2a2a30', countershade: 0.25, pattern: 'scales', patternColor: '#0a0a0e', patternAmount: 0.8, patternScale: 1.3, spine: '#3a3a40', horn: '#5a5050', fin: '#22242a', glow: '#ff3a3a', glowPattern: 'lines', glowAmount: 0.35 },
+      mesh: { tris: 1800 },
+    },
+  },
+  bonefin: {
+    label: 'Bonefin Eel', emoji: '🦴', category: 'abyss',
+    patch: {
+      name: 'Rattle', plan: 'swimmer', scale: 3,
+      body: { length: 0.6, chestDepth: 0.14, chestWidth: 0.08, rumpWidth: 0.07, arch: 0.02, spines: 0.08, spineCount: 40, sharp: 0.85 },
+      neck: { length: 0.04, thickness: 0.1, angle: 0 },
+      head: { size: 0.1, muzzleLength: 0.14, muzzleWidth: 0.04, muzzleDepth: 0.045, muzzleTaper: 0.5, pitch: 0, jaw: 1.5, teeth: 1.2, teethCount: 9, brow: 2, cheeks: 0.7, stop: 0.2 },
+      eyes: { size: 0.014, angle: 60, color: '#e8f8ff', style: 'socket', lids: 0.3, glow: true, anger: 0.85 },
+      ears: { length: 0 },
+      tail: { length: 1.6, thickness: 0.07, lift: 0, curl: 0 },
+      fins: { dorsal: 0, pectoral: 0.08, pelvic: 0, anal: 0, tail: 'vertical', tailSize: 0.12, spiny: 1 },
+      coat: { base: '#1c1a18', belly: '#2a2622', countershade: 0.2, pattern: 'stripes', patternColor: '#c8c0a8', patternAmount: 0.18, patternScale: 0.5, spine: '#d8d0b8', horn: '#e8e2d0', fin: '#c8c0a8', glow: '#9ae8ff', glowPattern: 'spots', glowAmount: 0.2 },
+    },
+  },
+  gloomwhale: {
+    label: 'Gloomwhale', emoji: '🌑', category: 'abyss', base: 'humpback',
+    patch: {
+      name: 'Old Quiet', scale: 9,
+      head: { jaw: 1.4, teeth: 0 },
+      eyes: { count: 4, color: '#9ff0ff', glow: true, lids: 0.55, style: 'socket' },
+      coat: { base: '#12161c', belly: '#1e242c', countershade: 0.35, pattern: 'spots', patternColor: '#2a323c', patternAmount: 0.2, glow: '#6af0ff', glowPattern: 'spots', glowAmount: 0.3 },
+    },
+  },
+
 };
 
 export function presetRecipe(species: string, seed = 1): AnimalRecipe {

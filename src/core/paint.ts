@@ -210,12 +210,14 @@ export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner, soft = 0):
   if (reg === 'horn') col = mix(hexRgb(C.horn), hexRgb(C.hoof), 0.15);
   if (reg === 'paw') col = mix(col, hexRgb(C.nose), st(-n[1], 0.55, 1)); // pads
   if (reg === 'feather') col = hexRgb(C.feather || C.sockColor);
+  if (reg === 'crest') col = hexRgb(C.crest);
+  if (reg === 'fin' && C.fin) col = mix(col, hexRgb(C.fin), 0.85);
 
   return col;
 }
 
 /** regions whose colour is a hard rule (never smoothed into their neighbours) */
-export const LOCKED_REGIONS = new Set(['nose', 'hoof', 'horn', 'earInner', 'paw', 'beak', 'spine']);
+export const LOCKED_REGIONS = new Set(['nose', 'hoof', 'horn', 'earInner', 'paw', 'beak', 'spine', 'crest']);
 
 /** hand-made facet jitter: a few % of brightness per facet */
 export function jitter(col: RGB, rc: AnimalRecipe, faceId: number): RGB {
@@ -226,4 +228,33 @@ export function jitter(col: RGB, rc: AnimalRecipe, faceId: number): RGB {
 
 export function srgbToLinear(c: number) {
   return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
+/**
+ * Bioluminescence, 0 … 1: photophore spots along the flanks, a glowing lateral line, softly
+ * glowing fins, and lure bulbs that are always lit. Baked into the emissive texture.
+ */
+export function paintGlow(ctx: PaintContext, p: V3, n: V3, o: Owner, soft = 0.04): number {
+  const reg = o.prim.region;
+  if (reg === 'lure') return 1;
+  const C = ctx.rc.coat;
+  if (!C.glow) return 0;
+  const amt = C.glowAmount ?? 0.5;
+  const q: V3 = [p[0] / ctx.size, p[1] / ctx.size, p[2] / ctx.size];
+  const body = ['body', 'chest', 'belly', 'neck', 'tail', 'head', 'jaw', 'muzzle'].includes(reg);
+  const sm = (x: number, e: number, w: number) => clamp((x - e + w) / (2 * w));
+  let g = 0;
+  if (body && (C.glowPattern === 'spots' || C.glowPattern === 'both')) {
+    // rows of dots down the lower flanks and belly
+    if (n[1] < 0.25 && n[1] > -0.85) {
+      const w = worley([q[0] * 16, q[1] * 16, q[2] * 16], ctx.rc.seed + 7);
+      g = Math.max(g, 1 - sm(w, 0.1 + 0.12 * amt, soft * 2));
+    }
+  }
+  if (body && (C.glowPattern === 'lines' || C.glowPattern === 'both')) {
+    // the lateral line, and a stripe under the jaw
+    g = Math.max(g, (1 - sm(Math.abs(n[1]), 0.06 + 0.06 * amt, soft)) * sm(Math.abs(n[0]), 0.55, 0.1));
+  }
+  if (reg === 'fin') g = Math.max(g, 0.35 * amt + 0.25);
+  return clamp(g);
 }

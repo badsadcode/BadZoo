@@ -7,7 +7,8 @@
  */
 import { add, clamp, cross, DEG, dot, len, lerp, lerp3, norm, scale, sub, V3 } from './math';
 import type { AnimalRecipe, Stance } from './recipe';
-import { fieldAt, frame, Prim, Region, Weights } from './sdf';
+import { fieldAt, frame, Prim, primBounds, Region, Weights } from './sdf';
+import { Rng } from './rng';
 
 // ───────────────────────────────────────────────────────── skeleton ──
 
@@ -16,8 +17,7 @@ export type Side = (typeof SIDES)[number];
 
 export const TAIL_BONES = 5;
 
-/** The fixed core rig every animal has. Bone order: parents always before children. */
-export const BONE_DEFS: [string, string | null][] = [
+const CORE_DEFS: [string, string | null][] = [
   ['Root', null],
   ['Hips', 'Root'],
   ['Spine1', 'Hips'],
@@ -29,24 +29,35 @@ export const BONE_DEFS: [string, string | null][] = [
   ['Ear_L', 'Head'],
   ['Ear_R', 'Head'],
   ...Array.from({ length: TAIL_BONES }, (_, i) => [`Tail${i + 1}`, i === 0 ? 'Hips' : `Tail${i}`] as [string, string]),
-  ...SIDES.flatMap((s) => [
-    [`Scapula_${s}`, 'Chest'],
-    [`UpperArm_${s}`, `Scapula_${s}`],
-    [`Forearm_${s}`, `UpperArm_${s}`],
-    [`FrontFoot_${s}`, `Forearm_${s}`],
-    [`FrontToe_${s}`, `FrontFoot_${s}`],
-    [`Thigh_${s}`, 'Hips'],
-    [`Shin_${s}`, `Thigh_${s}`],
-    [`HindFoot_${s}`, `Shin_${s}`],
-    [`HindToe_${s}`, `HindFoot_${s}`],
-  ] as [string, string][]),
 ];
+const FRONT_DEFS = (s: Side): [string, string][] => [
+  [`Scapula_${s}`, 'Chest'],
+  [`UpperArm_${s}`, `Scapula_${s}`],
+  [`Forearm_${s}`, `UpperArm_${s}`],
+  [`FrontFoot_${s}`, `Forearm_${s}`],
+  [`FrontToe_${s}`, `FrontFoot_${s}`],
+];
+const HIND_DEFS = (s: Side): [string, string][] => [
+  [`Thigh_${s}`, 'Hips'],
+  [`Shin_${s}`, `Thigh_${s}`],
+  [`HindFoot_${s}`, `Shin_${s}`],
+  [`HindToe_${s}`, `HindFoot_${s}`],
+];
+
+/** The full quadruped rig (core + 4 legs). Bone order: parents always before children. */
+export const BONE_DEFS: [string, string | null][] = [...CORE_DEFS, ...SIDES.flatMap((s) => [...FRONT_DEFS(s), ...HIND_DEFS(s)])];
 
 export const TRUNK_BONES = 3;
 
 /** Core rig + optional bones (wings, trunk) for this recipe. */
 export function boneDefs(rc: AnimalRecipe): [string, string | null][] {
-  const defs = [...BONE_DEFS];
+  const plan = rc.plan ?? 'quadruped';
+  const defs: [string, string | null][] = [...CORE_DEFS];
+  for (const sd of SIDES) {
+    if (plan === 'quadruped') defs.push(...FRONT_DEFS(sd));
+    if (plan !== 'swimmer') defs.push(...HIND_DEFS(sd));
+    else defs.push([`PecFin_${sd}`, 'Chest']);
+  }
   if (rc.head.trunk > 0) for (let i = 0; i < TRUNK_BONES; i++) defs.push([`Trunk${i + 1}`, i === 0 ? 'Head' : `Trunk${i}`]);
   if (isWingWalker(rc)) {
     for (const s of SIDES) for (let i = 1; i <= 3; i++) defs.push([`FrontFinger${i}_${s}`, `FrontFoot_${s}`]);
@@ -176,12 +187,18 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   const fs = rc.legs.footSize;
   const pawH = T * 0.55 * fs;
   const hoofR = T * 0.58 * fs;
-  const groundClear = foot === 'paw' ? pawH * 0.85 : hoofR * 0.9;
+  const birdFoot = foot === 'talon' || foot === 'webbed';
+  const toeR = Math.max(T * 0.3 * fs, h * 1.4);
+  const groundClear = foot === 'paw' ? pawH * 0.85 : birdFoot ? toeR : hoofR * 0.9;
 
   const shoulderZ = L / 2;
   const hipZ = -L / 2;
-  const shoulderY = rc.legs.front;
-  const hipY = rc.legs.hind;
+  const plan = rc.plan ?? 'quadruped';
+  const biped = plan === 'biped';
+  const swim = plan === 'swimmer';
+  // swimmers have no legs: the body simply lies with its belly at the floor
+  const shoulderY = swim ? D * 0.46 : rc.legs.front;
+  const hipY = swim ? D * 0.46 : rc.legs.hind;
   const layLeg = (top: V3, p: { len: number[]; ang: number[] }) => {
     const vert = p.len.reduce((a, l, i) => a + l * Math.cos(p.ang[i] * DEG), 0);
     const k = (top[1] - groundClear) / vert;
@@ -233,6 +250,7 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   const legs: Leg[] = [];
   for (const s of SIDES) {
     const sx = s === 'L' ? 1 : -1;
+    if (!biped && !swim) {
     const sj: V3 = [sx * B.chestWidth * 0.74, shoulderY, shoulderZ];
     let fp = sprawl ? layLegSprawl(sj, true, sx) : layLeg(sj, pat.front);
     let stand: V3 | undefined;
@@ -253,8 +271,11 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     world[`FrontFoot_${s}`] = fp[2];
     world[`FrontToe_${s}`] = fp[3];
     legs.push({ side: s, front: true, chain: ['Scapula', 'UpperArm', 'Forearm', 'FrontFoot', 'FrontToe'].map((n) => index[`${n}_${s}`]), tip: fp[4], knee: -1, ...(stand ? { stand, wing: true } : {}) });
+    }
+    if (swim) continue;
 
-    const hj: V3 = [sx * B.rumpWidth * 0.78, hipY, hipZ];
+    // bipeds stand with their feet under the middle of the body, not under the rump
+    const hj: V3 = [sx * B.rumpWidth * (biped ? 0.62 : 0.78), hipY, biped ? hipZ + L * 0.42 : hipZ];
     const hp = sprawl ? layLegSprawl(hj, false, sx) : layLeg(hj, pat.hind);
     world[`Thigh_${s}`] = hp[0];
     world[`Shin_${s}`] = hp[1];
@@ -270,8 +291,24 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   // wool depth grows with the animal (a mammoth's coat is deeper than a sheep's)
   const wool = rc.coat.wool * 0.035 * Math.max(1, Math.sqrt(D / 0.3));
   const woolly = wool > 0 ? { fluff: wool } : {};
-  // topline: a slim cone along the spine keeps the back continuous from croup to withers
   const midZ = (hipZ + scapTopZ) / 2;
+  if (swim) {
+    // streamlined spindle: widest a third of the way back from the head, tapering into the tail
+    const prof = [0.5, 0.78, 0.95, 1.0, 0.86];
+    const bonesZ = ['Hips', 'Spine1', 'Spine2', 'Chest', 'Chest'];
+    const yC = D * 0.5;
+    const half = D * 0.5;
+    const wf = B.chestWidth / half;
+    const flatS = wf < 1 ? { axis: [1, 0, 0] as V3, f: wf } : { axis: up, f: 1 / wf };
+    const pts: V3[] = prof.map((_, k) => [0, yC + Math.sin((Math.PI * k) / 4) * B.arch, lerp(hipZ - L * 0.05, shoulderZ + L * 0.05, k / 4)]);
+    for (let k = 0; k < 4; k++) {
+      const ra = half * prof[k] * Math.max(1, wf);
+      const rb = half * prof[k + 1] * Math.max(1, wf);
+      cone('body', pts[k], pts[k + 1], ra, rb, kBody, W([bonesZ[k], 1]), W([bonesZ[k], 0.5], [bonesZ[k + 1], 0.5]), W([bonesZ[k + 1], 1]), { flat: flatS, ...woolly });
+    }
+    if (B.belly > 0) ell('belly', [0, yC - half * 0.35, 0], fwd, up, [B.chestWidth * 0.9, half * (0.5 + 0.3 * B.belly), L * 0.35], kBody, W(['Spine1', 0.5], ['Spine2', 0.5]));
+  } else {
+  // topline: a slim cone along the spine keeps the back continuous from croup to withers
   cone('body', [0, yP - D * 0.1, hipZ - L * 0.05], [0, spineY(midZ) - D * 0.1, midZ], D * 0.12, D * 0.12, kBody, W(['Hips', 1]), W(['Spine1', 1]), W(['Spine2', 1]), woolly);
   cone('body', [0, spineY(midZ) - D * 0.1, midZ], [0, yW - D * 0.1, scapTopZ], D * 0.12, D * 0.13, kBody, W(['Spine1', 1]), W(['Spine2', 1]), W(['Chest', 1]), woolly);
   // ribcage: deep, egg-shaped, widest behind the elbows
@@ -304,18 +341,22 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     });
   }
 
+  }
+
   // ── limbs
   const legWool = wool * 0.6 > 0 ? { fluff: wool * 0.6 } : {};
   for (const s of SIDES) {
     const sx = s === 'L' ? 1 : -1;
     const side: V3 = [sx, 0, 0];
+    if (swim) continue;
+    const n = (x: string) => `${x}_${s}`;
+    if (!biped) {
     const sc = world[`Scapula_${s}`];
     const sj = world[`UpperArm_${s}`];
     const el = world[`Forearm_${s}`];
     const wr = world[`FrontFoot_${s}`];
     const tj = world[`FrontToe_${s}`];
     const ft = legs.find((l) => l.side === s && l.front)!.tip;
-    const n = (x: string) => `${x}_${s}`;
     const sh = B.shoulders;
     if (wingWalk) {
       // wing-arm: heavy shoulder, long arm bones, a knuckle and a claw to walk on
@@ -336,6 +377,7 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     ell('lowerLeg', add(lerp3(el, wr, 0.3), [0, 0, T * 0.12]), sub(wr, el), side, [T * 0.75, T * 0.8, len(sub(wr, el)) * 0.33], T * 0.4, W([n('Forearm'), 1]));
     cone('lowerLeg', wr, tj, T * 0.52, T * 0.44, T * 0.3, W([n('Forearm'), 0.5], [n('FrontFoot'), 0.5]), W([n('FrontFoot'), 1]), W([n('FrontFoot'), 0.5], [n('FrontToe'), 0.5]), { span: [0.7, 0.9] });
     addFoot(n('FrontFoot'), n('FrontToe'), wr, tj, ft);
+    }
     }
 
     const hj = world[`Thigh_${s}`];
@@ -368,6 +410,17 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     }
     const dir = norm(sub(tip, toe));
     const flatDir = sprawl ? norm([dir[0], 0, dir[2]]) : norm([0, 0, dir[2] || 1]);
+    if (birdFoot) {
+      // bird feet: three toes forward, one back (perching), webbed for water birds
+      const fd = norm([dir[0], 0, dir[2] || 1]);
+      const rotY = (v: V3, a: number): V3 => [v[0] * Math.cos(a) + v[2] * Math.sin(a), v[1], -v[0] * Math.sin(a) + v[2] * Math.cos(a)];
+      const tl = len(sub(tip, toe)) + T * 1.4 * fs;
+      const base: V3 = [toe[0], toeR, toe[2]];
+      const toes: [V3, number][] = [[rotY(fd, 0.5), tl * 0.85], [fd, tl], [rotY(fd, -0.5), tl * 0.85], [scale(fd, -1), tl * 0.45]];
+      toes.forEach(([d, l]) => cone('hoof', base, add(base, scale(d, l)), toeR, Math.max(toeR * 0.45, h * 0.7), toeR * 0.5, W([toeBone, 0.8], [footBone, 0.2]), undefined, undefined, { span: [0.95, 1] }));
+      if (foot === 'webbed') ell('hoof', add(base, scale(fd, tl * 0.5)), fd, [0, 1, 0], [tl * 0.5, Math.max(h * 1.3, toeR * 0.5), tl * 0.48], toeR * 0.5, W([toeBone, 1]), { span: [0.97, 1] });
+      return;
+    }
     if (foot === 'paw') {
       const plant = rc.legs.stance === 'plantigrade' || sprawl;
       const back = plant ? ankle : toe;
@@ -477,12 +530,16 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   // fangs along the mouth line, the front pair longest
   const teeth = Hd.teeth ?? 0;
   if (teeth > 0.03 && !beak && Hd.trunk <= 0) {
-    const ts = [0.38, 0.55, 0.7, 0.86];
+    const nT = Math.max(1, Math.min(14, Math.round(Hd.teethCount ?? 4)));
+    const ts = Array.from({ length: nT }, (_, i) => lerp(0.3, 0.88, nT === 1 ? 1 : i / (nT - 1)));
+    const tr = new Rng(`teeth:${rc.seed}`);
     for (const sx of [1, -1])
       ts.forEach((t, i) => {
         const rt = lerp(mR * 1.05, tipR, t);
         const root = add(add(lerp3(muzzleBase, muzzleTip, t), scale([1, 0, 0], sx * rt * 0.72 * fx)), scale(mUp, -rt * 0.5 * fy));
-        const l = teeth * mR * (i === ts.length - 1 ? 0.95 : 0.5);
+        // many teeth = irregular needles; few = a tidy row with a long front fang
+        const irregular = nT > 5 ? 0.5 + tr.next() * 0.9 : 1;
+        const l = teeth * mR * (i === ts.length - 1 ? 0.95 : 0.5) * irregular;
         const rb = Math.max(teeth * mR * (i === ts.length - 1 ? 0.16 : 0.11), minThick * 0.45);
         cone('horn', root, add(root, scale(norm(add(scale(mUp, -1), [sx * 0.15, 0, 0])), l)), rb, Math.max(rb * 0.15, minThick * 0.3), rb * 0.3, head);
       });
@@ -496,9 +553,11 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     else prims.push({ kind: 'ell', region: 'muzzle', sub: true, c: add(bc, scale(mUp, mR * 0.18)), ax: frame(mDir, mUp), r: br, k: mR * 0.3, wa: head } as Prim);
   }
   // lower jaw
-  const jawA = at(C, 0, -hs * 0.55, -hs * 0.05);
-  const jawB = add(muzzleTip, add(scale(uh, -tipR * 0.75 * (mFlat.axis === uh ? mFlat.f : 1)), scale(f, -tipR * 0.45)));
-  cone('jaw', jawA, beak ? lerp3(jawA, jawB, 0.8) : jawB, hs * 0.4 * Hd.cheeks, tipR * 0.55, hs * 0.25, head, undefined, undefined, { flat: { axis: [1, 0, 0], f: 0.8 } });
+  const jawK = Hd.jaw ?? 1;
+  const jawA = at(C, 0, -hs * 0.55 * Math.sqrt(jawK), -hs * 0.05);
+  // a big jaw juts forward and hangs open (anglerfish, viperfish)
+  const jawB = add(muzzleTip, add(scale(uh, -tipR * 0.75 * (mFlat.axis === uh ? mFlat.f : 1) * jawK), scale(f, -tipR * 0.45 + (jawK - 1) * tipR * 1.6)));
+  cone('jaw', jawA, beak ? lerp3(jawA, jawB, 0.8) : jawB, hs * 0.4 * Hd.cheeks * Math.sqrt(jawK), tipR * 0.55 * jawK, hs * 0.25, head, undefined, undefined, { flat: { axis: [1, 0, 0], f: 0.8 } });
   for (const sx of [1, -1]) {
     ell('head', at(C, sx * hs * 0.5 * hw, -hs * 0.32, -hs * 0.02), f, uh, [hs * 0.38 * Hd.cheeks * Math.sqrt(hw), hs * 0.42 * Hd.cheeks, hs * 0.48 * Hd.cheeks], hs * 0.3, head); // cheek
     ell('brow', at(C, sx * hs * 0.36 * hw, hs * 0.32, hs * 0.55), norm(add(f, [sx * 0.3, 0, 0])), uh, [hs * 0.24 * Hd.brow, hs * 0.14 * Hd.brow, hs * 0.22 * Hd.brow], hs * 0.18, head);
@@ -543,9 +602,38 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   };
 
   // ── beak hook (griffin, owlbear)
-  if (beak) {
-    hornChain(muzzleTip, norm(add(f, scale(uh, -0.4))), 3, tipR * 0.9 + Hd.muzzleLength * 0.12, tipR * 0.95, tipR * 0.25, (d) => norm(rotX(d, 28 * DEG)), 'beak');
+  if (teeth > 0.03 && jawK > 1.1 && Hd.trunk <= 0) {
+    // lower fangs, pointing up out of an underbite
+    for (const sx of [1, -1])
+      [0.55, 0.8, 1].forEach((t, i) => {
+        const root = add(lerp3(jawA, jawB, t), scale([1, 0, 0], sx * tipR * 0.45 * jawK));
+        const l = teeth * mR * (0.5 + 0.4 * i) * jawK * 0.7;
+        const rb = Math.max(teeth * mR * 0.12 * jawK, minThick * 0.45);
+        cone('horn', root, add(root, scale(norm(add(uh, scale(f, 0.25))), l)), rb, Math.max(rb * 0.15, minThick * 0.3), rb * 0.3, head);
+      });
+  }
+  // anglerfish lure: a stalk off the forehead arching forward, ending in a glowing bulb
+  if ((Hd.lure ?? 0) > 0.01) {
+    const n = 5;
+    const pts = hornChain(at(C, 0, hs * 0.8, hs * 0.3), norm(add(uh, scale(f, 0.6))), n, Hd.lure / n, Math.max(hs * 0.06, minThick * 0.5), Math.max(hs * 0.035, minThick * 0.4), (d) => norm(rotX(d, 24 * DEG)), 'fin');
+    const bulb = pts[n];
+    ell('lure', bulb, f, uh, [hs * 0.16, hs * 0.16, hs * 0.18].map((x) => Math.max(x, minThick)) as V3, hs * 0.05, head);
+  }
+  const hook = Hd.beakHook ?? 0.6;
+  if (beak && hook > 0.05) {
+    hornChain(muzzleTip, norm(add(f, scale(uh, -0.4 * hook))), 3, (tipR * 0.9 + Hd.muzzleLength * 0.12) * (0.5 + 0.5 * hook), tipR * 0.95, tipR * 0.25, (d) => norm(rotX(d, 28 * hook * DEG)), 'beak');
     headTip = add(muzzleTip, scale(f, tipR * 1.5));
+  }
+  // comb / crest along the top of the head, and wattles under the beak (rooster)
+  const crestS = Hd.crest ?? 0;
+  if (crestS > 0.03) {
+    for (let i = 0; i < 4; i++) {
+      const t = i / 3;
+      const bump = 0.75 + 0.25 * Math.sin(Math.PI * (t * 0.8 + 0.1));
+      ell('crest', at(C, 0, hs * (0.8 + 0.25 * crestS * bump), hs * lerp(0.55, -0.35, t)), f, uh, [Math.max(minThick * 0.7, hs * 0.09), hs * 0.38 * crestS * bump, hs * 0.2], hs * 0.06, head);
+    }
+    if (beak && biped && crestS > 0.3)
+      for (const sx of [1, -1]) ell('crest', add(at(muzzleBase, sx * hs * 0.1, -hs * 0.5 * crestS, hs * 0.05), [0, 0, 0]), f, uh, [hs * 0.1, hs * 0.28 * crestS, hs * 0.12], hs * 0.05, head);
   }
 
   // ── trunk (elephant): a curling chain from the upper lip, with its own bones
@@ -612,6 +700,12 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   for (const s of SIDES) {
     const sx = s === 'L' ? 1 : -1;
     const side: V3 = [sx, 0, 0];
+    if (E.length < 0.004) {
+      // no ears (birds, fish): the bones still exist, parked on the skull
+      world[`Ear_${s}`] = add(C, scale(side, hs * 0.5));
+      earTips.push(world[`Ear_${s}`]);
+      continue;
+    }
     const sAng = lerp(18, 78, E.side) * DEG;
     const bd = norm(add(add(scale(uh, Math.cos(sAng)), scale(side, Math.sin(sAng))), scale(f, -0.25)));
     const surf = surfaceAlong(add(C, scale(f, -hs * 0.1)), bd);
@@ -709,6 +803,64 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     for (const o of outs) {
       const l = Tl.spikes * Math.max(th, Tl.thickness * 0.5) * 4.5;
       cone('spine', base, add(base, scale(norm(add(o, scale(dT, 0.9))), l)), Math.max(th * 0.55 * Tl.spikes, minThick * 0.5), minThick * 0.3, th * 0.2, W([`Tail${TAIL_BONES}`, 1]));
+    }
+  }
+
+  // ── fins (swimmers): dorsal, pectoral (on their own bones), pelvic, anal, and the tail fin
+  if (swim) {
+    const Fn = rc.fins;
+    const half = D * 0.5;
+    const yC = D * 0.5;
+    const finThin = (r: number) => Math.min(0.6, Math.max(minThick / Math.max(r, 1e-4), 0.16));
+    const spiny = clamp(Fn.spiny ?? 0);
+    const fin = (a: V3, b: V3, ra: number, rb: number, axis: V3, w: Weights) => {
+      const webK = 1 - 0.35 * spiny;
+      cone('fin', a, lerp3(a, b, webK), Math.max(ra * webK, minThick * 0.6), Math.max(rb, minThick * 0.3), ra * 0.3 * (1 - 0.6 * spiny), w, undefined, undefined, { flat: { axis, f: finThin(ra) } });
+      if (spiny > 0.03) {
+        // jagged fin rays fanning out past the web
+        const d = sub(b, a);
+        const l = len(d);
+        [-0.42, -0.14, 0.14, 0.42].forEach((ang, i) => {
+          const dir = norm(rotAxis(norm(d), axis, ang));
+          const tip = add(a, scale(dir, l * (1 + 0.35 * spiny) * (i === 1 || i === 2 ? 1 : 0.8)));
+          cone('fin', a, tip, Math.max(ra * 0.14, minThick * 0.5), minThick * 0.3, minThick, w);
+        });
+      }
+    };
+    if (Fn.dorsal > 0) {
+      const z = lerp(hipZ, shoulderZ, 0.48);
+      const base: V3 = [0, yC + half * 0.85, z];
+      fin(base, add(base, [0, Fn.dorsal, -Fn.dorsal * 0.55]), Fn.dorsal * 0.45, Fn.dorsal * 0.06, [1, 0, 0], W(['Spine2', 0.5], ['Spine1', 0.5]));
+    }
+    for (const sd of SIDES) {
+      const sx = sd === 'L' ? 1 : -1;
+      const wf = Math.max(1, B.chestWidth / half);
+      if (Fn.pectoral > 0) {
+        const base: V3 = [sx * B.chestWidth * 0.85, yC - half * 0.35, shoulderZ - L * 0.08];
+        world[`PecFin_${sd}`] = base;
+        const tipP = add(base, scale(norm([sx * 0.9, -0.45, -0.6]), Fn.pectoral));
+        fin(base, tipP, Fn.pectoral * 0.38, Fn.pectoral * 0.08, norm(cross(sub(tipP, base), [0, 0, 1])), W([`PecFin_${sd}`, 1]));
+      } else world[`PecFin_${sd}`] = [sx * B.chestWidth * 0.8, yC - half * 0.3, shoulderZ - L * 0.08];
+      if (Fn.pelvic > 0) {
+        const base: V3 = [sx * B.chestWidth * 0.45 * wf, yC - half * 0.8, lerp(hipZ, shoulderZ, 0.35)];
+        fin(base, add(base, scale(norm([sx * 0.4, -0.6, -0.7]), Fn.pelvic)), Fn.pelvic * 0.35, Fn.pelvic * 0.06, [sx, 0, 0], W(['Spine1', 1]));
+      }
+    }
+    if (Fn.anal > 0) {
+      const base: V3 = [0, yC - half * 0.6, hipZ + L * 0.02];
+      fin(base, add(base, [0, -Fn.anal * 0.8, -Fn.anal * 0.7]), Fn.anal * 0.4, Fn.anal * 0.06, [1, 0, 0], W(['Hips', 1]));
+    }
+    if (Fn.tailSize > 0) {
+      const tp = tailPts[TAIL_BONES];
+      const dT = norm(sub(tp, tailPts[TAIL_BONES - 1]));
+      const sideT = norm(cross([0, 1, 0], dT));
+      const upT = cross(dT, sideT);
+      const lobes: [V3, number, V3][] =
+        Fn.tail === 'flukes'
+          ? [[norm(add(scale(sideT, 1.1), scale(dT, 0.7))), 1, upT], [norm(add(scale(sideT, -1.1), scale(dT, 0.7))), 1, upT]]
+          : [[norm(add(scale(upT, 1.0), scale(dT, 0.75))), 1, sideT], [norm(add(scale(upT, -0.8), scale(dT, 0.75))), 0.8, sideT]];
+      const wT = W([`Tail${TAIL_BONES}`, 1]);
+      for (const [d, k, ax] of lobes) fin(sub(tp, scale(dT, Tl.thickness * 0.4)), add(tp, scale(d, Fn.tailSize * k)), Fn.tailSize * 0.36 * k, Fn.tailSize * 0.07, ax, wT);
     }
   }
 
@@ -868,6 +1020,16 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
       const nA = `WingArm_${s}`;
       const nF = `WingFore_${s}`;
       const nH = `WingHand_${s}`;
+      if (rc.wings.kind === 'flipper') {
+        // penguin flipper: one stiff, flat paddle, no feathers or membrane
+        const tipF = fingers[0];
+        const pw = S * 0.16;
+        const ax = norm(cross(sub(tipF, J0), [0, 0, 1]));
+        cone('wing', J0, J1, pw * 1.1, pw, pw * 0.4, W(['Chest', 0.4], [nA, 0.6]), W([nA, 1]), W([nA, 0.5], [nF, 0.5]), { flat: { axis: ax, f: Math.max(0.18, minThick / pw) } });
+        cone('wing', J1, tipF, pw, pw * 0.35, pw * 0.3, W([nA, 0.3], [nF, 0.7]), W([nF, 1]), W([nH, 1]), { flat: { axis: ax, f: Math.max(0.18, minThick / pw) } });
+        wings.push({ side: s, bones: [nA, nF, nH].map((n) => index[n]), joints: [J0, J1, J2], fingers, anchor: [sx * B.rumpWidth * 0.85, yP - D * 0.12, hipZ + L * 0.22], anchorBone: index.Spine1 });
+        continue;
+      }
       ell('wing', lerp3(J0, J1, 0.2), sub(J1, J0), [0, 1, 0], [r0 * 1.6, r0 * 1.3, S * 0.12], r0 * 1.2, W([nA, 0.6], ['Chest', 0.4]));
       cone('wing', J0, J1, r0 * 1.15, r0 * 0.8, r0 * 0.8, W(['Chest', 0.4], [nA, 0.6]), W([nA, 1]), W([nA, 0.5], [nF, 0.5]));
       cone('wing', J1, J2, r0 * 0.8, r0 * 0.6, r0 * 0.4, W([nA, 0.5], [nF, 0.5]), W([nF, 1]), W([nF, 0.5], [nH, 0.5]));
@@ -891,14 +1053,17 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   const eyes: Eye[] = [];
   const Ey = rc.eyes;
   const faceSet = prims.filter((p) => ['head', 'brow', 'muzzle', 'jaw', 'mane'].includes(p.region) && !p.sub);
+  const pairs = Math.max(1, Math.min(4, Math.round((Ey.count ?? 2) / 2)));
+  for (let pi = 0; pi < pairs; pi++)
   for (const sx of [1, -1]) {
-    const a = Ey.angle * DEG;
-    const look = norm(add(add(scale(f, Math.cos(a)), [sx * Math.sin(a), 0, 0]), scale(uh, 0.12)));
-    const origin = at(C, sx * hs * 0.25, hs * 0.18, hs * 0.48);
+    // extra pairs climb up and back over the skull, each a bit smaller
+    const a = (Ey.angle + pi * 14) * DEG;
+    const look = norm(add(add(scale(f, Math.cos(a) * (1 - 0.2 * pi)), [sx * Math.sin(a), 0, 0]), scale(uh, 0.12 + 0.42 * pi)));
+    const origin = at(C, sx * hs * 0.25, hs * (0.18 + 0.2 * pi), hs * (0.48 - 0.22 * pi));
     const surf = surfaceAlong(origin, look, faceSet.filter((p) => p.region !== 'mane'));
     const style = Ey.style === 'painted' && rc.mesh.texture <= 0 ? 'ball' : (Ey.style ?? 'ball');
     const lids = clamp(Ey.lids ?? 0);
-    const r = Ey.size;
+    const r = Ey.size * Math.pow(0.78, pi);
     if (style === 'painted') {
       eyes.push({ bone: index.Head, c: surf, r, look, surf, painted: true, lids });
       continue;
@@ -908,11 +1073,13 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     eyes.push({ bone: index.Head, c, r, look, surf, lids });
     // a socket so the eye sits in the head instead of on it (deeper for 'socket')
     prims.push({ kind: 'ell', region: 'head', sub: true, c: sub(surf, scale(look, r * (deep ? 0.3 : 0.15))), ax: frame(look), r: deep ? [r * 1.25, r * 1.02, r * 0.95] : [r * 1.05, r * 0.85, r * 0.6], k: r * 0.5, wa: head });
-    if (deep || lids > 0.02) {
+    if (deep || lids > 0.02 || (Ey.anger ?? 0) > 0.02) {
       // upper eyelid: covers the top of the iris. this is what stops the "surprised" look
       const lid = deep ? Math.max(lids, 0.25) : lids;
-      const upE = perp(uh, look);
-      prims.push({ kind: 'ell', region: 'head', c: add(add(c, scale(upE, r * (1.12 - 0.62 * lid))), scale(look, r * 0.22)), ax: frame(look, upE), r: [r * 1.18, r * 0.5, r * 0.98], k: r * 0.28, wa: head } as Prim);
+      // anger tilts the lid so its inner corner (toward the nose) drops: instant menace
+      const anger = clamp(Ey.anger ?? 0);
+      const upE = rotAxis(perp(uh, look), look, sx * anger * 34 * DEG);
+      prims.push({ kind: 'ell', region: 'head', c: add(add(c, scale(upE, r * (1.12 - 0.62 * lid - 0.12 * anger))), scale(look, r * 0.22)), ax: frame(look, upE), r: [r * 1.25, r * 0.5, r * 0.98], k: r * 0.28, wa: head } as Prim);
     }
   }
   // nostrils: painted when the animal is textured, carved when it's facet-coloured
@@ -924,11 +1091,49 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     prims.push({ kind: 'ell', region: 'nose', sub: true, c, ax: frame(f, uh), r: [r, r * 0.8, r * 1.5], k: r * 0.6, wa: head });
   }
 
+  // ── sharpness: shrink the clay blending so shapes meet at hard, bony edges
+  const sharp = clamp(B.sharp ?? 0);
+  if (sharp > 0) for (const p of prims) if (!p.sub) p.k *= 1 - 0.72 * sharp;
+
   // ── stand on the ground: the lowest foot surface goes to y = 0
   let minY = Infinity;
   for (const p of prims) {
-    if (p.region !== 'paw' && p.region !== 'hoof') continue;
+    if (swim ? p.sub : p.region !== 'paw' && p.region !== 'hoof') continue;
     minY = Math.min(minY, p.kind === 'cone' ? Math.min(p.a[1] - p.ra, p.b[1] - p.rb) : p.c[1] - p.r[1]);
+  }
+  if (swim) {
+    // fins have loose bounding boxes: find the true lowest point of the surface by probing
+    const add2 = prims.filter((p) => !p.sub);
+    const bs = add2.map(primBounds);
+    const lo: V3 = [Infinity, Infinity, Infinity];
+    const hi: V3 = [-Infinity, -Infinity, -Infinity];
+    for (const b of bs) for (let k = 0; k < 3; k++) {
+      lo[k] = Math.min(lo[k], b.min[k]);
+      hi[k] = Math.max(hi[k], b.max[k]);
+    }
+    let best = Infinity;
+    const N = 34;
+    const step = Math.max(h, (hi[1] - lo[1]) / 50);
+    for (let i = 0; i <= N; i++)
+      for (let j = 0; j <= N; j++) {
+        const x = lerp(lo[0], hi[0], i / N);
+        const z = lerp(lo[2], hi[2], j / N);
+        for (let y = lo[1]; y < Math.min(best, hi[1]); y += step) {
+          if (fieldAt(add2, [x, y, z]) < 0) {
+            // refine the crossing between y - step and y
+            let a0 = y - step;
+            let a1 = y;
+            for (let k = 0; k < 8; k++) {
+              const m = (a0 + a1) / 2;
+              if (fieldAt(add2, [x, m, z]) < 0) a1 = m;
+              else a0 = m;
+            }
+            best = Math.min(best, a1);
+            break;
+          }
+        }
+      }
+    if (best < Infinity) minY = best;
   }
   const dy = -minY;
   const shift = (v: V3): V3 => [v[0], v[1] + dy, v[2]];

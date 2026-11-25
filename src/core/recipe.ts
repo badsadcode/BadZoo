@@ -5,11 +5,12 @@
  */
 
 export type Stance = 'digitigrade' | 'unguligrade' | 'plantigrade' | 'sprawling';
-export type Foot = 'paw' | 'hoof' | 'cloven';
+export type Foot = 'paw' | 'hoof' | 'cloven' | 'talon' | 'webbed';
+export type Plan = 'quadruped' | 'biped' | 'swimmer';
 export type Nose = 'pad' | 'snout' | 'broad' | 'beak';
 export type Mane = 'none' | 'crest' | 'ruff';
 export type Horns = 'none' | 'cow' | 'ram' | 'goat' | 'antlers' | 'unicorn' | 'rhino' | 'dragon';
-export type Wings = 'none' | 'membrane' | 'feathered';
+export type Wings = 'none' | 'membrane' | 'feathered' | 'flipper';
 export type Barding = 'none' | 'leather' | 'plate';
 export type Pattern = 'solid' | 'spots' | 'rosettes' | 'stripes' | 'patches' | 'saddle' | 'points' | 'tabby' | 'scales' | 'split';
 
@@ -17,6 +18,8 @@ export interface AnimalRecipe {
   name: string;
   species: string;
   seed: number;
+  /** body plan: four legs, two legs + wings (birds), or no legs + fins (fish, whales) */
+  plan: Plan;
   /** applied on top of everything else at generation time (presets describe the male) */
   sex: 'male' | 'female';
   /** global size multiplier */
@@ -46,6 +49,8 @@ export interface AnimalRecipe {
     spineCount: number;
     /** topline curvature, + = roach back */
     arch: number;
+    /** 0 = soft clay blending (cute) … 1 = hard edges where shapes meet (bony, monstrous) */
+    sharp: number;
   };
   legs: {
     /** shoulder joint height */
@@ -107,6 +112,16 @@ export interface AnimalRecipe {
     tuskCurl: number;
     /** fangs along the jaw line, 0 … 1 */
     teeth: number;
+    /** fangs per side (irregular needle teeth when high) */
+    teethCount: number;
+    /** lower jaw size: 1 normal … 2 huge underbite (anglerfish, viperfish) */
+    jaw: number;
+    /** anglerfish lure stalk length (m), 0 = none */
+    lure: number;
+    /** beak hook: 0 straight (duck, heron) … 1 hooked (eagle, parrot) */
+    beakHook: number;
+    /** comb / crest on top of the head, 0 … 1 (rooster, cockatoo) */
+    crest: number;
     noseSize: number;
   };
   eyes: {
@@ -122,6 +137,10 @@ export interface AnimalRecipe {
     style: 'ball' | 'socket' | 'painted';
     /** upper eyelids: 0 = wide awake ("surprised") … 1 = sleepy */
     lids: number;
+    /** number of eyes (2 … 8): extra pairs climb the skull. monsters only, please */
+    count: number;
+    /** 0 = calm … 1 = furious: the upper lid slants down toward the nose */
+    anger: number;
   };
   ears: {
     length: number;
@@ -152,6 +171,8 @@ export interface AnimalRecipe {
     tuft: number;
     /** spikes at the tail tip, 0 … 1 */
     spikes: number;
+    /** fan of tail feathers, 0 … 1 (birds) */
+    fan: number;
   };
   horns: {
     kind: Horns;
@@ -166,6 +187,18 @@ export interface AnimalRecipe {
     chord: number;
     /** wyvern body plan: the wings are the front legs (walks on its wing-wrists, membrane folds) */
     walk: boolean;
+  };
+  /** swimmers: fin sizes (m) and the tail fin */
+  fins: {
+    dorsal: number;
+    pectoral: number;
+    pelvic: number;
+    anal: number;
+    /** vertical (fish, shark) or horizontal flukes (dolphin, whale) */
+    tail: 'vertical' | 'flukes';
+    tailSize: number;
+    /** 0 = smooth paddles … 1 = jagged fin rays */
+    spiny: number;
   };
   /** riding gear: generated as shells over the body, so it fits any animal */
   tack: {
@@ -215,6 +248,16 @@ export interface AnimalRecipe {
     blaze: boolean;
     /** leg feathering colour ('' = sock colour) */
     feather: string;
+    /** comb / crest / wattle colour */
+    crest: string;
+    /** fin colour ('' = coat) */
+    fin: string;
+    /** bioluminescence colour ('' = none): baked into an emissive texture */
+    glow: string;
+    /** photophore spots along the flanks, a glowing lateral line, glowing fin edges */
+    glowPattern: 'spots' | 'lines' | 'both';
+    /** 0 … 1 how much glows */
+    glowAmount: number;
     /** wool / fluff lumps, 0..1 */
     wool: number;
     /** per-facet brightness jitter, 0..1 (hand-made low-poly look) */
@@ -254,17 +297,19 @@ export const BASE: AnimalRecipe = {
   name: 'Rex',
   species: 'dog',
   seed: 1,
+  plan: 'quadruped',
   sex: 'male',
   scale: 1,
-  body: { length: 0.5, chestDepth: 0.27, chestWidth: 0.115, rumpWidth: 0.1, waist: 0.72, belly: 0, shoulders: 1, haunch: 1, hump: 0, humps: 1, spines: 0, spineCount: 14, arch: 0.01 },
+  body: { length: 0.5, chestDepth: 0.27, chestWidth: 0.115, rumpWidth: 0.1, waist: 0.72, belly: 0, shoulders: 1, haunch: 1, hump: 0, humps: 1, spines: 0, spineCount: 14, arch: 0.01, sharp: 0 },
   legs: { front: 0.36, hind: 0.4, thickness: 0.048, stance: 'digitigrade', foot: 'paw', footSize: 1, feathering: 0 },
   neck: { length: 0.2, thickness: 0.07, angle: 45, mane: 'none', maneSize: 1 },
-  head: { size: 0.075, muzzleLength: 0.11, muzzleWidth: 0.04, muzzleDepth: 0.04, muzzleTaper: 0.72, muzzleSquare: 0, muzzleFlat: 0, muzzleBulb: 0, muzzleBridge: 0, muzzleDrop: 0, stop: 0.5, dome: 0, headWidth: 1, flews: 0, pitch: 12, cheeks: 1, brow: 1, nose: 'pad', noseSize: 1, trunk: 0, tusks: 0, tuskCurl: 1, teeth: 0 },
-  eyes: { size: 0.013, angle: 32, color: '#9a6a2c', pupil: 'round', glow: false, style: 'socket', lids: 0.3 },
+  head: { size: 0.075, muzzleLength: 0.11, muzzleWidth: 0.04, muzzleDepth: 0.04, muzzleTaper: 0.72, muzzleSquare: 0, muzzleFlat: 0, muzzleBulb: 0, muzzleBridge: 0, muzzleDrop: 0, stop: 0.5, dome: 0, headWidth: 1, flews: 0, pitch: 12, cheeks: 1, brow: 1, nose: 'pad', noseSize: 1, trunk: 0, tusks: 0, tuskCurl: 1, teeth: 0, teethCount: 4, jaw: 1, lure: 0, beakHook: 0.6, crest: 0 },
+  eyes: { size: 0.013, angle: 32, color: '#9a6a2c', pupil: 'round', glow: false, style: 'socket', lids: 0.3, count: 2, anger: 0 },
   ears: { length: 0.12, width: 0.065, tip: 0.8, spread: 22, tilt: 8, droop: 0, side: 0.35, fold: 0 },
-  tail: { length: 0.38, thickness: 0.03, brush: 1.45, lift: -55, curl: 25, tuft: 0, spikes: 0 },
+  tail: { length: 0.38, thickness: 0.03, brush: 1.45, lift: -55, curl: 25, tuft: 0, spikes: 0, fan: 0 },
   horns: { kind: 'none', length: 0.2, thickness: 0.03 },
   wings: { kind: 'none', span: 0.6, chord: 0.55, walk: false },
+  fins: { dorsal: 0, pectoral: 0, pelvic: 0, anal: 0, tail: 'vertical', tailSize: 0, spiny: 0 },
   tack: { saddle: false, bridle: false, blanket: false, barding: 'none', leather: '#5a3a24', cloth: '#7a2630', metal: '#b9bcc4' },
   coat: {
     base: '#b9814a',
@@ -291,6 +336,11 @@ export const BASE: AnimalRecipe = {
     sockColor: '#f1ece2',
     blaze: false,
     feather: '',
+    crest: '#d63a2a',
+    fin: '',
+    glow: '',
+    glowPattern: 'spots',
+    glowAmount: 0.5,
     wool: 0,
     jitter: 0.35,
   },

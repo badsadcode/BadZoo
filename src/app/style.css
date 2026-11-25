@@ -81,6 +81,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
   .viewport { grid-row: 2; }
 }
 .seg.cats { margin-bottom: 10px; background: var(--panel2); }
-.seg.cats button { flex: 1; }
+.seg.cats { flex-wrap: wrap; }
+.seg.cats button { flex: 1 1 25%; border-bottom: 1px solid var(--line); }
 .seg.sex { grid-column: 2; }
 .seg.sex button { flex: 1; }

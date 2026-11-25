@@ -166,10 +166,21 @@ const GAITS: Gait[] = [
   { name: 'Gallop', period: 0.46, duty: 0.3, phase: [0.62, 0, 0.52, 0.1], stride: 1.35, lift: 0.24, bob: 0.04, pitch: 6, flex: 11, nod: 6, roll: 1 },
 ];
 
+/** two legs: walk with a pigeon head-bob, run, and a both-feet hop */
+const BIPED_GAITS: Gait[] = [
+  { name: 'Walk', period: 0.8, duty: 0.6, phase: [0, 0, 0.5, 0.5], stride: 0.6, lift: 0.22, bob: 0.03, pitch: 2, flex: 1, nod: 14, roll: 4 },
+  { name: 'Run', period: 0.5, duty: 0.38, phase: [0, 0, 0.5, 0.5], stride: 1.1, lift: 0.3, bob: 0.05, pitch: 4, flex: 2, nod: 6, roll: 3 },
+  { name: 'Hop', period: 0.55, duty: 0.35, phase: [0, 0, 0, 0], stride: 0.7, lift: 0.4, bob: 0.12, pitch: 6, flex: 3, nod: 8, roll: 0 },
+];
+
+/** a leg's slot in Gait.phase: [LF, LH, RF, RH] */
+const slot = (leg: Leg) => (leg.side === 'L' ? 0 : 2) + (leg.front ? 0 : 1);
+
 export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
   const idx = a.index;
   const nb = a.bones.length;
-  const legLen = (a.dims.legFront + a.dims.legHind) / 2;
+  // average height of the legs' top joints (swimmers: a body-size stand-in)
+  const legLen = a.legs.length ? a.legs.reduce((acc, l) => acc + a.bones[l.chain[1]].world[1], 0) / a.legs.length : a.dims.withers * 0.6;
   const sim = Math.sqrt(legLen / 0.4);
   const tailBones = a.bones.filter((b) => b.name.startsWith('Tail')).map((b) => idx[b.name]);
   const blank = (): Pose => ({ local: Array.from({ length: nb }, () => QI), hips: [0, 0, 0] });
@@ -234,6 +245,7 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
   };
 
   const clips: Clip[] = [];
+  if (!a.legs.length) return swimClips(a, rc, blank, rot, tailBones);
 
   // ── Idle: breathe, look around, flick an ear, wag a little
   {
@@ -262,7 +274,8 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
   }
 
   // ── gaits
-  for (const g of GAITS) {
+  const gaits = a.legs.some((l) => l.front) ? GAITS : BIPED_GAITS;
+  for (const g of gaits) {
     const dur = g.period * sim;
     const stride = g.stride * legLen;
     clips.push({
@@ -301,7 +314,7 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
           tailBones.forEach((b, i) => (pose.local[b] = qMul(pose.local[b], qy(Math.sin(w - 1 - i * 0.6) * (6 + i * 3) * DEG))));
         }
         const targets = a.legs.map((leg, i): LegTarget => {
-          const ph = (((p - g.phase[i]) % 1) + 1) % 1;
+          const ph = (((p - g.phase[slot(leg)]) % 1) + 1) % 1;
           if (ph < g.duty) {
             const s = ph / g.duty;
             const push = smooth((s - 0.6) / 0.4);
@@ -316,7 +329,7 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
         // scapulae swing with their legs
         a.legs.forEach((leg, i) => {
           if (!leg.front) return;
-          const ph = (((p - g.phase[i]) % 1) + 1) % 1;
+          const ph = (((p - g.phase[slot(leg)]) % 1) + 1) % 1;
           const sw = ph < g.duty ? 0.5 - ph / g.duty : -0.5 + smooth((ph - g.duty) / (1 - g.duty));
           pose.local[leg.chain[0]] = qx(-sw * g.stride * 9 * DEG);
         });
@@ -383,4 +396,49 @@ export function buildClips(a: Anatomy, rc: AnimalRecipe): Clip[] {
 /** Root-to-bone global pose for tests and the exporter. */
 export function restPose(a: Anatomy): Pose {
   return { local: a.bones.map(() => QI), hips: [0, 0, 0] };
+}
+
+/** Swimmers: no legs, so everything is a wave travelling down the spine into the tail. */
+function swimClips(a: Anatomy, rc: AnimalRecipe, blank: () => Pose, rot: (p: Pose, n: string, q: Quat) => void, tailBones: number[]): Clip[] {
+  const flukes = rc.fins.tail === 'flukes';
+  // fish wave side to side; whales and dolphins pump up and down
+  const bend = (x: number) => (flukes ? qx(x) : qy(x));
+  const size = Math.max(0.2, rc.body.length * rc.scale);
+  const fins = (pose: Pose, w: number, amt: number) => {
+    rot(pose, 'PecFin_L', qz(Math.sin(w) * amt * DEG));
+    rot(pose, 'PecFin_R', qz(-Math.sin(w) * amt * DEG));
+  };
+  const wave = (name: string, period: number, amp: number, speed: number): Clip => ({
+    name, duration: period, loop: true, speed,
+    sample(t) {
+      const w = (2 * Math.PI * t) / period;
+      const pose = blank();
+      rot(pose, 'Chest', bend(Math.sin(w + 1.2) * amp * 0.15 * DEG));
+      rot(pose, 'Spine2', bend(Math.sin(w + 0.6) * amp * 0.2 * DEG));
+      rot(pose, 'Spine1', bend(Math.sin(w) * amp * 0.3 * DEG));
+      tailBones.forEach((b, i) => (pose.local[b] = bend(Math.sin(w - 0.7 * (i + 1)) * amp * (0.35 + 0.18 * i) * DEG)));
+      rot(pose, 'Head', bend(-Math.sin(w + 1.6) * amp * 0.12 * DEG));
+      pose.hips = [0, Math.sin(w * 2) * size * 0.004, 0];
+      fins(pose, w, name === 'Idle' ? 18 : 10);
+      return pose;
+    },
+  });
+  const sim = Math.sqrt(size / 1);
+  return [
+    wave('Idle', 2.4 * sim, 6, 0),
+    wave('Swim', 1.1 * sim, 14, size * 0.9),
+    wave('Dash', 0.55 * sim, 22, size * 2.6),
+    {
+      name: 'Bite', duration: 1.2, loop: true, speed: 0,
+      sample(t) {
+        const pose = blank();
+        const snap = Math.max(0, Math.sin((t / 1.2) * Math.PI * 2)) ** 3;
+        rot(pose, 'Head', qx(-snap * 14 * DEG));
+        rot(pose, 'Chest', qx(snap * 4 * DEG));
+        tailBones.forEach((b, i) => (pose.local[b] = bend(Math.sin(t * 5 - i * 0.7) * (4 + i * 2) * DEG)));
+        fins(pose, t * 6, 12);
+        return pose;
+      },
+    },
+  ];
 }

@@ -186,8 +186,46 @@ function feathers(bd: Builder, wing: Wing, S: number, base: RGB, tip: RGB, chest
   row(J2, add(J2, scale(handDir, handLen * 0.5)), 2, S * 0.2, one(hand), one(hand), S * 0.025, light, base);
 }
 
+/** a bird's tail: feather cards fanned out from the last tail bone */
+function tailFan(bd: Builder, a: Anatomy, rc: AnimalRecipe) {
+  const n = a.index[`Tail5`];
+  const t4 = a.bones[a.index.Tail4].world;
+  const tip = a.dims.tailTip;
+  const dir = norm(sub(tip, t4));
+  const side = norm(cross([0, 1, 0], dir));
+  const up = cross(dir, side);
+  const L = rc.body.length * rc.scale * (0.35 + 0.65 * rc.tail.fan);
+  const base = hexRgb(rc.coat.tail || rc.coat.wing || rc.coat.base);
+  const tipC = mix(base, hexRgb(rc.coat.patternColor), 0.5);
+  const count = 7;
+  const spread = (0.6 + 0.9 * rc.tail.fan) * Math.PI * 0.5;
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1) - 0.5;
+    const d = norm(add(add(scale(dir, Math.cos(t * spread)), scale(side, Math.sin(t * spread))), scale(up, 0.05)));
+    const l = L * (1 - Math.abs(t) * 0.35);
+    const w = l * 0.22;
+    const sd = norm(cross(up, d));
+    const p0 = add(tip, scale(up, Math.abs(t) * L * 0.01));
+    const pl = add(add(p0, scale(d, l * 0.45)), scale(sd, w * 0.5));
+    const pr = add(add(p0, scale(d, l * 0.45)), scale(sd, -w * 0.5));
+    const pt = add(p0, scale(d, l));
+    const pm = add(p0, scale(d, l * 0.72));
+    const wt: W = [[n, 1]];
+    bd.tri(p0, pl, pm, wt, wt, wt, base);
+    bd.tri(p0, pm, pr, wt, wt, wt, base);
+    bd.tri(pl, pt, pm, wt, wt, wt, tipC);
+    bd.tri(pm, pt, pr, wt, wt, wt, tipC);
+  }
+}
+
 export function buildWings(a: Anatomy, rc: AnimalRecipe): Sheet | null {
-  if (!a.wings.length) return null;
+  const fan = (rc.tail.fan ?? 0) > 0.03;
+  if (!fan && (!a.wings.length || rc.wings.kind === 'flipper')) return null;
+  if (!a.wings.length || rc.wings.kind === 'flipper') {
+    const bd = new Builder(rc, rc.body.length * rc.scale * 0.002);
+    tailFan(bd, a, rc);
+    return bd.out;
+  }
   const S = rc.wings.span * rc.scale;
   const bd = new Builder(rc, S * 0.0015);
   const base = hexRgb(rc.coat.wing || rc.coat.base);
@@ -200,5 +238,6 @@ export function buildWings(a: Anatomy, rc: AnimalRecipe): Sheet | null {
       feathers(bd, w, S, base, mix(base, hexRgb(rc.coat.patternColor), 0.55), chest, rc.wings.chord / 0.55);
     }
   }
+  if (fan) tailFan(bd, a, rc);
   return bd.out;
 }

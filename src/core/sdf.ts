@@ -37,7 +37,10 @@ export type Region =
   | 'trunk'
   | 'spine'
   | 'wing'
-  | 'feather';
+  | 'feather'
+  | 'fin'
+  | 'crest'
+  | 'lure';
 
 interface PrimBase {
   /** blend radius into everything sculpted before it */

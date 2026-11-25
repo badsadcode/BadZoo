@@ -376,7 +376,7 @@ function initUI() {
 
 let cat: Category = categoryOf(state.own.species);
 function renderSpecies() {
-  const tabs: [Category, string][] = [['real', '🌍 Real'], ['breeds', '🐾 Breeds'], ['fantasy', '🐉 Fantasy'], ['mount', '🏇 Mounts']];
+  const tabs: [Category, string][] = [['real', '🌍 Real'], ['breeds', '🐾 Breeds'], ['birds', '🐦 Birds'], ['sea', '🐟 Sea'], ['abyss', '🦑 Abyss'], ['fantasy', '🐉 Fantasy'], ['mount', '🏇 Mounts']];
   $('cats').innerHTML = tabs.map(([k, l]) => `<button data-c="${k}" class="${k === cat ? 'on' : ''}">${l}</button>`).join('');
   $('cats').querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => {
     cat = b.dataset.c as Category;
