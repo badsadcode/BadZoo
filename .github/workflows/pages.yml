@@ -2,7 +2,7 @@ name: Test & deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, 'claude/**']
+    branches: [main, 'claude/**', 'ccr-**']
   pull_request:
   workflow_dispatch:
 
