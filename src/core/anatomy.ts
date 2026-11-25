@@ -374,12 +374,39 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   cone('neck', add(n0, [0, -D * 0.12, L * 0.02]), at(C, 0, -hs * 0.65, -hs * 0.35), neckBase * 0.7, hs * 0.42, kBody * 0.7, W(['Chest', 0.5], ['Neck1', 0.5]), W(['Neck2', 1]), W(['Head', 0.7], ['Neck2', 0.3]), { flat: { axis: [1, 0, 0], f: 0.8 }, ...woolly });
   ell('head', C, f, uh, [hs * 0.92, hs * 0.86, hs * 1.02], hs * 0.4, head);
   const muzzleBase = at(C, 0, -hs * 0.22, hs * 0.38);
-  const muzzleTip = at(C, 0, -hs * 0.3 - Hd.muzzleDepth * 0.15, hs * 0.62 + Hd.muzzleLength);
+  const mShape = Hd.muzzleShape ?? 'tapered';
+  const muzzleTip = at(C, 0, -hs * 0.3 - Hd.muzzleDepth * 0.15 - (Hd.muzzleDrop ?? 0) * (Hd.muzzleLength * 0.3 + hs * 0.08), hs * 0.62 + Hd.muzzleLength);
   const mR = Math.max(Hd.muzzleWidth, Hd.muzzleDepth);
   const mFlat = Hd.muzzleWidth < Hd.muzzleDepth ? { axis: [1, 0, 0] as V3, f: Hd.muzzleWidth / Hd.muzzleDepth } : { axis: uh, f: Hd.muzzleDepth / Hd.muzzleWidth };
-  const tipR = mR * Hd.muzzleTaper;
   const beak = Hd.nose === 'beak';
-  cone(beak ? 'beak' : 'muzzle', muzzleBase, muzzleTip, mR * 1.05, tipR, hs * (beak ? 0.15 : 0.35), head, undefined, undefined, { flat: mFlat });
+  const shaped = beak ? 'tapered' : mShape;
+  const tipR = mR * (shaped === 'blunt' ? Math.max(Hd.muzzleTaper, 0.85) : Hd.muzzleTaper);
+  const fx = mFlat.axis === uh ? 1 : mFlat.f; // width factor at the tip
+  const fy = mFlat.axis === uh ? mFlat.f : 1; // depth factor at the tip
+  const mDir = norm(sub(muzzleTip, muzzleBase));
+  const mUp = norm(sub(uh, scale(mDir, dot(uh, mDir))));
+  const mLen = len(sub(muzzleTip, muzzleBase));
+  if (shaped === 'flat') {
+    // short, wide, pushed-in face (cats, pugs): one soft pad instead of a cone
+    ell('muzzle', lerp3(muzzleBase, muzzleTip, 0.55), mDir, mUp, [mR * 1.2 * fx + hs * 0.05, mR * 1.05 * fy, Math.max(mLen * 0.6, mR * 0.55)], hs * 0.3, head);
+  } else {
+    cone(beak ? 'beak' : 'muzzle', muzzleBase, muzzleTip, mR * 1.05, tipR, hs * (beak ? 0.15 : 0.35), head, undefined, undefined, { flat: mFlat });
+  }
+  if (shaped === 'blunt') {
+    // squared-off end (horse, bear, hippo): a rounded box capping the muzzle
+    ell('muzzle', sub(muzzleTip, scale(mDir, tipR * 0.25)), mDir, mUp, [tipR * 0.98 * fx, tipR * 0.92 * fy, tipR * 0.75], tipR * 0.35, head, { boxy: 0.42 });
+  } else if (shaped === 'bulb') {
+    // soft, swollen end (horse lips, cow, moose, camel)
+    ell('muzzle', add(muzzleTip, scale(mDir, tipR * 0.05)), mDir, mUp, [tipR * 1.32 * fx, tipR * 1.25 * fy, tipR * 1.05], tipR * 0.5, head);
+  }
+  // nose bridge: Roman bump or dished dip along the top of the muzzle
+  const bridge = Hd.muzzleBridge ?? 0;
+  if (Math.abs(bridge) > 0.02 && !beak) {
+    const bc = add(lerp3(muzzleBase, muzzleTip, 0.45), scale(mUp, mR * 0.75 * fy));
+    const br: V3 = [mR * 0.6 * fx, mR * 0.32 * Math.abs(bridge) + h, mLen * 0.38 + mR * 0.2];
+    if (bridge > 0) ell('muzzle', bc, mDir, mUp, br, mR * 0.35, head);
+    else prims.push({ kind: 'ell', region: 'muzzle', sub: true, c: add(bc, scale(mUp, mR * 0.18)), ax: frame(mDir, mUp), r: br, k: mR * 0.3, wa: head } as Prim);
+  }
   // lower jaw
   const jawA = at(C, 0, -hs * 0.55, -hs * 0.05);
   const jawB = add(muzzleTip, add(scale(uh, -tipR * 0.75 * (mFlat.axis === uh ? mFlat.f : 1)), scale(f, -tipR * 0.45)));

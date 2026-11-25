@@ -75,6 +75,8 @@ export interface Ellipsoid extends PrimBase {
   /** orthonormal local axes */
   ax: [V3, V3, V3];
   r: V3;
+  /** > 0: a rounded box with half-extents r instead of an ellipsoid (corner radius = boxy × smallest r) */
+  boxy?: number;
 }
 
 export type Prim = Cone | Ellipsoid;
@@ -115,6 +117,13 @@ function sdRoundCone(p: V3, a: V3, b: V3, r1: number, r2: number): { d: number; 
 
 function sdEllipsoid(p: V3, e: Ellipsoid): number {
   const q = sub(p, e.c);
+  if (e.boxy) {
+    const rr = Math.min(e.r[0], e.r[1], e.r[2]) * Math.min(0.95, e.boxy);
+    const qx = Math.abs(dot(q, e.ax[0])) - e.r[0] + rr;
+    const qy = Math.abs(dot(q, e.ax[1])) - e.r[1] + rr;
+    const qz = Math.abs(dot(q, e.ax[2])) - e.r[2] + rr;
+    return Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - rr;
+  }
   const lx = dot(q, e.ax[0]) / e.r[0];
   const ly = dot(q, e.ax[1]) / e.r[1];
   const lz = dot(q, e.ax[2]) / e.r[2];
@@ -197,7 +206,10 @@ export function primBounds(pr: Prim): AABB {
   }
   // bounding box of a rotated ellipsoid
   const ext: V3 = [0, 0, 0];
-  for (let i = 0; i < 3; i++) ext[i] = Math.hypot(pr.ax[0][i] * pr.r[0], pr.ax[1][i] * pr.r[1], pr.ax[2][i] * pr.r[2]) + pad;
+  for (let i = 0; i < 3; i++)
+    ext[i] = (pr.boxy
+      ? Math.abs(pr.ax[0][i] * pr.r[0]) + Math.abs(pr.ax[1][i] * pr.r[1]) + Math.abs(pr.ax[2][i] * pr.r[2])
+      : Math.hypot(pr.ax[0][i] * pr.r[0], pr.ax[1][i] * pr.r[1], pr.ax[2][i] * pr.r[2])) + pad;
   return { min: sub(pr.c, ext), max: add(pr.c, ext) };
 }
 

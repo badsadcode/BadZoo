@@ -7,6 +7,7 @@
 export type Stance = 'digitigrade' | 'unguligrade' | 'plantigrade' | 'sprawling';
 export type Foot = 'paw' | 'hoof' | 'cloven';
 export type Nose = 'pad' | 'snout' | 'broad' | 'beak';
+export type MuzzleShape = 'tapered' | 'blunt' | 'bulb' | 'flat';
 export type Mane = 'none' | 'crest' | 'ruff';
 export type Horns = 'none' | 'cow' | 'ram' | 'goat' | 'antlers' | 'unicorn' | 'rhino' | 'dragon';
 export type Wings = 'none' | 'membrane' | 'feathered';
@@ -72,6 +73,12 @@ export interface AnimalRecipe {
     muzzleDepth: number;
     /** tip radius / base radius */
     muzzleTaper: number;
+    /** muzzle form: tapered cone, blunt (squared box end), bulb (soft swollen end), flat (short pushed-in face) */
+    muzzleShape: MuzzleShape;
+    /** nose bridge profile: -1 dished … 0 straight … +1 Roman nose */
+    muzzleBridge: number;
+    /** -1 tip tilts up … +1 tip droops down */
+    muzzleDrop: number;
     /** degrees the face points down from the neck's line of sight */
     pitch: number;
     cheeks: number;
@@ -220,7 +227,7 @@ export const BASE: AnimalRecipe = {
   body: { length: 0.5, chestDepth: 0.27, chestWidth: 0.115, rumpWidth: 0.1, waist: 0.72, belly: 0, shoulders: 1, haunch: 1, hump: 0, humps: 1, spines: 0, spineCount: 14, arch: 0.01 },
   legs: { front: 0.36, hind: 0.4, thickness: 0.048, stance: 'digitigrade', foot: 'paw', footSize: 1 },
   neck: { length: 0.2, thickness: 0.07, angle: 45, mane: 'none', maneSize: 1 },
-  head: { size: 0.075, muzzleLength: 0.11, muzzleWidth: 0.04, muzzleDepth: 0.04, muzzleTaper: 0.72, pitch: 12, cheeks: 1, brow: 1, nose: 'pad', noseSize: 1, trunk: 0, tusks: 0 },
+  head: { size: 0.075, muzzleLength: 0.11, muzzleWidth: 0.04, muzzleDepth: 0.04, muzzleTaper: 0.72, muzzleShape: 'tapered', muzzleBridge: 0, muzzleDrop: 0, pitch: 12, cheeks: 1, brow: 1, nose: 'pad', noseSize: 1, trunk: 0, tusks: 0 },
   eyes: { size: 0.013, angle: 32, color: '#9a6a2c', pupil: 'round', glow: false },
   ears: { length: 0.12, width: 0.065, tip: 0.8, spread: 22, tilt: 8, droop: 0, side: 0.35 },
   tail: { length: 0.38, thickness: 0.03, brush: 1.45, lift: -55, curl: 25, tuft: 0 },

@@ -226,7 +226,7 @@ const SECTIONS: { title: string; open?: boolean; ctls: Ctl[] }[] = [
   { title: 'Neck', ctls: [L('neck.length', 'Length'), L('neck.thickness', 'Thickness'), A('neck.angle', 'Angle', -15, 85), S('neck.mane', 'Mane', ['none', 'crest', 'ruff']), N('neck.maneSize', 'Mane size', 0.3, 2)] },
   {
     title: 'Head',
-    ctls: [L('head.size', 'Skull'), L('head.muzzleLength', 'Muzzle len.'), L('head.muzzleWidth', 'Muzzle width'), L('head.muzzleDepth', 'Muzzle depth'), N('head.muzzleTaper', 'Taper', 0.3, 1.3),
+    ctls: [L('head.size', 'Skull'), S('head.muzzleShape', 'Muzzle shape', ['tapered', 'blunt', 'bulb', 'flat']), L('head.muzzleLength', 'Muzzle length', (r) => r.head.size * 2.4), L('head.muzzleWidth', 'Muzzle width'), L('head.muzzleDepth', 'Muzzle depth'), N('head.muzzleTaper', 'Taper', 0.3, 1.3), N('head.muzzleBridge', 'Nose bridge', -1, 1), N('head.muzzleDrop', 'Muzzle droop', -1, 1),
       A('head.pitch', 'Head angle', -15, 80), N('head.cheeks', 'Cheeks', 0.5, 1.8), N('head.brow', 'Brow', 0, 2), S('head.nose', 'Nose', ['pad', 'snout', 'broad', 'beak']), N('head.noseSize', 'Nose size', 0.4, 2), L('head.trunk', 'Trunk', (r) => r.head.size * 4), L('head.tusks', 'Tusks', (r) => r.head.size * 2)],
   },
   { title: 'Eyes', ctls: [L('eyes.size', 'Size'), A('eyes.angle', 'Facing', 0, 90), C('eyes.color', 'Iris'), S('eyes.pupil', 'Pupil', ['round', 'slit', 'bar']), B('eyes.glow', 'Glow')] },

@@ -28,8 +28,11 @@ const loader = new GLTFLoader();
 let i = 0;
 const jobs = [];
 for (const sp of species) {
-  const [name, seed] = sp.split(':');
+  const [name0, ...mods] = sp.split('~');
+  const [name, seed] = name0.split(':');
   const rc = presetRecipe(name, Number(seed ?? 1));
+  // ~head.muzzleShape=blunt~head.muzzleLength=0.2 : per-animal overrides
+  for (const m of mods) { const [k, v] = m.split('='); const ks = k.split('.'); let o = rc; while (ks.length > 1) o = o[ks.shift()]; o[ks[0]] = isNaN(Number(v)) ? v : Number(v); }
   if (q.get('shading')) rc.mesh.shading = q.get('shading');
   if (q.get('tris')) rc.mesh.tris = Number(q.get('tris'));
   if (q.get('topo')) rc.mesh.topology = q.get('topo');
