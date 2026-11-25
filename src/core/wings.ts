@@ -36,7 +36,10 @@ class Builder {
   constructor(private rc: AnimalRecipe, private eps: number) {}
   /** one double-sided triangle */
   tri(a: V3, b: V3, c: V3, wa: W, wb: W, wc: W, col: RGB) {
-    const n = norm(cross(sub(b, a), sub(c, a)));
+    const cr = cross(sub(b, a), sub(c, a));
+    // zero-area triangles (a fin root lying on its own outline) have no normal: skip them
+    if (Math.hypot(cr[0], cr[1], cr[2]) < 1e-14) return;
+    const n = norm(cr);
     const lin = jitter(col, this.rc, 9000 + this.face++).map(srgbToLinear) as RGB;
     const off = scale(n, this.eps);
     const emit = (p: V3, w: W, nn: V3, o: V3) => {
@@ -218,7 +221,25 @@ function tailFan(bd: Builder, a: Anatomy, rc: AnimalRecipe) {
   }
 }
 
+/** swimmer fins: fans of triangles around each fin's root */
+function finSheets(bd: Builder, a: Anatomy, rc: AnimalRecipe) {
+  const base = hexRgb(rc.coat.fin || rc.coat.base);
+  const edge = mix(base, hexRgb(rc.coat.patternColor), 0.35);
+  for (const sh of a.sheets ?? []) {
+    const n = sh.outline.length;
+    for (let i = 0; i < n - 1; i++) {
+      const outer = (i + 1) / n > 0.25 && (i + 1) / n < 0.75;
+      bd.tri(sh.root, sh.outline[i], sh.outline[i + 1], sh.rootW, sh.w[i], sh.w[i + 1], outer ? edge : base);
+    }
+  }
+}
+
 export function buildWings(a: Anatomy, rc: AnimalRecipe): Sheet | null {
+  if (a.sheets?.length) {
+    const bd = new Builder(rc, rc.body.chestDepth * rc.scale * 0.002);
+    finSheets(bd, a, rc);
+    return bd.out;
+  }
   const fan = (rc.tail.fan ?? 0) > 0.03;
   if (!fan && (!a.wings.length || rc.wings.kind === 'flipper')) return null;
   if (!a.wings.length || rc.wings.kind === 'flipper') {

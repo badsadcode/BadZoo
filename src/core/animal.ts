@@ -11,7 +11,7 @@ import { gridLaplacian, remesh } from './remesh';
 import type { Grid } from './sdf';
 import { hexRgb, jitter, LOCKED_REGIONS, paintFacet, PaintContext, RGB, srgbToLinear } from './paint';
 import type { AnimalRecipe } from './recipe';
-import { Region, sampleGrid } from './sdf';
+import { primBounds, Region, sampleGrid } from './sdf';
 import { owner, ownerIndex, skinVertex } from './skin';
 import { applySex } from './species';
 import { buildTack } from './tack';
@@ -119,13 +119,11 @@ function extent(a: Anatomy): number {
   let mx = [-Infinity, -Infinity, -Infinity];
   for (const p of a.prims) {
     if (p.region === 'wing') continue; // wings shouldn't coarsen the body's grid
-    const pts = p.kind === 'cone' ? [p.a, p.b] : [p.c];
-    const r = p.kind === 'cone' ? Math.max(p.ra, p.rb) : Math.max(...p.r);
-    for (const q of pts)
-      for (let i = 0; i < 3; i++) {
-        mn[i] = Math.min(mn[i], q[i] - r);
-        mx[i] = Math.max(mx[i], q[i] + r);
-      }
+    const b = primBounds(p);
+    for (let i = 0; i < 3; i++) {
+      mn[i] = Math.min(mn[i], b.min[i]);
+      mx[i] = Math.max(mx[i], b.max[i]);
+    }
   }
   mn = mn.map((x) => x);
   return Math.max(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]);

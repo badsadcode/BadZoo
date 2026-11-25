@@ -9,6 +9,7 @@ import { add, clamp, cross, DEG, dot, len, lerp, lerp3, norm, scale, sub, V3 } f
 import type { AnimalRecipe, Stance } from './recipe';
 import { fieldAt, frame, Prim, primBounds, Region, Weights } from './sdf';
 import { Rng } from './rng';
+import { buildSwimmer, type FinSheet } from './swimmer';
 
 // ───────────────────────────────────────────────────────── skeleton ──
 
@@ -125,6 +126,8 @@ export interface Anatomy {
   eyes: Eye[];
   legs: Leg[];
   wings: Wing[];
+  /** swimmers: flat fin sheets */
+  sheets?: FinSheet[];
   /** small painted features (texture mode): nostrils */
   marks: { kind: 'nostril'; c: V3; r: number }[];
   /** useful measurements for animation & UI */
@@ -166,6 +169,8 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   const index: Record<string, number> = {};
   const defs = boneDefs(rc);
   defs.forEach(([n], i) => (index[n] = i));
+  // swimmers have their own builder: a lofted body and sheet fins
+  if ((rc.plan ?? 'quadruped') === 'swimmer') return buildSwimmer(rc, h, defs, index);
   const world: Record<string, V3> = {};
   const prims: Prim[] = [];
   const W = (...pairs: [string, number][]): Weights => pairs.map(([n, w]) => [index[n], w]);
@@ -1099,7 +1104,7 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   let minY = Infinity;
   for (const p of prims) {
     if (swim ? p.sub : p.region !== 'paw' && p.region !== 'hoof') continue;
-    minY = Math.min(minY, p.kind === 'cone' ? Math.min(p.a[1] - p.ra, p.b[1] - p.rb) : p.c[1] - p.r[1]);
+    minY = Math.min(minY, p.kind === 'cone' ? Math.min(p.a[1] - p.ra, p.b[1] - p.rb) : p.kind === 'ell' ? p.c[1] - p.r[1] : primBounds(p).min[1]);
   }
   if (swim) {
     // fins have loose bounding boxes: find the true lowest point of the surface by probing
@@ -1141,8 +1146,9 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     if (p.kind === 'cone') {
       p.a = shift(p.a);
       p.b = shift(p.b);
-    } else p.c = shift(p.c);
+    } else if (p.kind === 'ell') p.c = shift(p.c);
   }
+  shiftTubes(prims, shift);
   for (const e of eyes) {
     e.c = shift(e.c);
     e.surf = shift(e.surf);
@@ -1194,11 +1200,12 @@ export function scaleAnatomy(a: Anatomy, s: number) {
       p.b = S(p.b);
       p.ra *= s;
       p.rb *= s;
-    } else {
+    } else if (p.kind === 'ell') {
       p.c = S(p.c);
       p.r = S(p.r);
     }
   }
+  scaleTubes(a.prims, s);
   for (const e of a.eyes) {
     e.c = S(e.c);
     e.surf = S(e.surf);
@@ -1226,4 +1233,26 @@ export function scaleAnatomy(a: Anatomy, s: number) {
   d.headTip = S(d.headTip);
   d.tailTip = S(d.tailTip);
   d.earTips = d.earTips.map(S);
+}
+
+/** tubes share their sample arrays between prims: move each array once */
+export function shiftTubes(prims: Prim[], f: (v: V3) => V3) {
+  const done = new Set<V3[]>();
+  for (const p of prims) {
+    if (p.kind !== 'tube' || done.has(p.pts)) continue;
+    done.add(p.pts);
+    for (let i = 0; i < p.pts.length; i++) p.pts[i] = f(p.pts[i]);
+  }
+}
+function scaleTubes(prims: Prim[], s: number) {
+  const done = new Set<V3[]>();
+  for (const p of prims) {
+    if (p.kind !== 'tube' || done.has(p.pts)) continue;
+    done.add(p.pts);
+    for (let i = 0; i < p.pts.length; i++) {
+      p.pts[i] = [p.pts[i][0] * s, p.pts[i][1] * s, p.pts[i][2] * s];
+      p.h[i] *= s;
+      p.w[i] *= s;
+    }
+  }
 }

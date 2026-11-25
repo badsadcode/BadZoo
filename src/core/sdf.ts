@@ -85,7 +85,24 @@ export interface Ellipsoid extends PrimBase {
   boxy?: number;
 }
 
-export type Prim = Cone | Ellipsoid;
+/**
+ * A lofted tube: elliptical cross-sections (half-width w, half-height h) swept along a centreline.
+ * One continuous surface from snout to tail: the swimmer body. Samples i0…i1 belong to this prim.
+ */
+export interface Tube extends PrimBase {
+  kind: 'tube';
+  pts: V3[];
+  h: number[];
+  w: number[];
+  side: V3[];
+  up: V3[];
+  /** skin binding per sample */
+  sw: Weights[];
+  i0: number;
+  i1: number;
+}
+
+export type Prim = Cone | Ellipsoid | Tube;
 
 // ───────────────────────────────────────────────────────── primitives ──
 
@@ -184,10 +201,48 @@ export function primDist(p: V3, pr: Prim): { d: number; t: number } {
       r = sdRoundCone(q, pr.a, pr.b, pr.ra, pr.rb);
       r.d *= pr.flat.f;
     } else r = sdRoundCone(p, pr.a, pr.b, pr.ra, pr.rb);
-  } else r = { d: sdEllipsoid(p, pr), t: 0 };
+  } else if (pr.kind === 'tube') r = sdTube(p, pr);
+  else r = { d: sdEllipsoid(p, pr), t: 0 };
   if (pr.fluff) r.d -= pr.fluff * woolLumps(p, pr.fluff);
   if (pr.cut) r.d = smax(r.d, dot(p, pr.cut.n) - pr.cut.o, pr.cut.k);
   return r;
+}
+
+function sdTube(p: V3, tb: Tube): { d: number; t: number } {
+  let best = Infinity;
+  let bt = 0;
+  const n = tb.pts.length;
+  for (let i = tb.i0; i < tb.i1; i++) {
+    const a = tb.pts[i];
+    const b = tb.pts[i + 1];
+    // cheap reject: this segment's bounding sphere is farther than the best hit so far
+    const rr = Math.max(tb.h[i], tb.w[i], tb.h[i + 1], tb.w[i + 1]);
+    const mx = (a[0] + b[0]) / 2 - p[0], my = (a[1] + b[1]) / 2 - p[1], mz = (a[2] + b[2]) / 2 - p[2];
+    const half = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / 2;
+    if (Math.hypot(mx, my, mz) - half - rr > best) continue;
+    const ab = sub(b, a);
+    const l2 = dot(ab, ab) || 1e-12;
+    const t = Math.max(0, Math.min(1, dot(sub(p, a), ab) / l2));
+    const c: V3 = [a[0] + ab[0] * t, a[1] + ab[1] * t, a[2] + ab[2] * t];
+    const s0 = tb.side[i], s1 = tb.side[i + 1], u0 = tb.up[i], u1 = tb.up[i + 1];
+    const sv: V3 = [s0[0] + (s1[0] - s0[0]) * t, s0[1] + (s1[1] - s0[1]) * t, s0[2] + (s1[2] - s0[2]) * t];
+    const uv: V3 = [u0[0] + (u1[0] - u0[0]) * t, u0[1] + (u1[1] - u0[1]) * t, u0[2] + (u1[2] - u0[2]) * t];
+    const hh = tb.h[i] + (tb.h[i + 1] - tb.h[i]) * t;
+    const ww = tb.w[i] + (tb.w[i + 1] - tb.w[i]) * t;
+    const q = sub(p, c);
+    const lx = dot(q, sv) / ww;
+    const ly = dot(q, uv) / hh;
+    const mr = Math.min(ww, hh);
+    // distance along the segment past its ends (zero inside it): without this every segment
+    // would act like an infinite cylinder and the fattest one would swallow the whole fish
+    const ax = dot(q, ab) / Math.sqrt(l2) / mr;
+    const d = (Math.hypot(lx, ly, ax) - 1) * mr;
+    if (d < best) {
+      best = d;
+      bt = (i + t) / (n - 1);
+    }
+  }
+  return { d: best, t: bt };
 }
 
 /** polynomial smooth min / max */
@@ -205,6 +260,18 @@ export interface AABB {
 
 export function primBounds(pr: Prim): AABB {
   const pad = (pr.fluff ?? 0) + 0.001;
+  if (pr.kind === 'tube') {
+    const mn: V3 = [Infinity, Infinity, Infinity];
+    const mx: V3 = [-Infinity, -Infinity, -Infinity];
+    for (let i = pr.i0; i <= pr.i1; i++) {
+      const r = Math.max(pr.h[i], pr.w[i]) + pad;
+      for (let k = 0; k < 3; k++) {
+        mn[k] = Math.min(mn[k], pr.pts[i][k] - r);
+        mx[k] = Math.max(mx[k], pr.pts[i][k] + r);
+      }
+    }
+    return { min: mn, max: mx };
+  }
   if (pr.kind === 'cone') {
     const r = Math.max(pr.ra, pr.rb) + pad;
     return {

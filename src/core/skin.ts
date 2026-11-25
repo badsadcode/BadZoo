@@ -57,6 +57,16 @@ export function skinVertex(prims: Prim[], p: V3, h: number): [number, number][] 
 }
 
 export function bindingAt(pr: Prim, t: number): [number, number][] {
+  if (pr.kind === 'tube') {
+    // continuous weights along the loft: blend the two nearest samples
+    const f = Math.max(0, Math.min(pr.sw.length - 1, t * (pr.sw.length - 1)));
+    const i = Math.min(pr.sw.length - 2, Math.floor(f));
+    const s = f - i;
+    const m = new Map<number, number>();
+    for (const [b, w] of pr.sw[i]) m.set(b, (m.get(b) ?? 0) + w * (1 - s));
+    for (const [b, w] of pr.sw[i + 1]) m.set(b, (m.get(b) ?? 0) + w * s);
+    return [...m.entries()];
+  }
   if (pr.kind === 'ell' || !pr.wb) return pr.wa;
   const blend = (a: [number, number][], b: [number, number][], s: number) => {
     const m = new Map<number, number>();
