@@ -32,7 +32,11 @@ export type Region =
   | 'hoof'
   | 'tail'
   | 'tailTip'
-  | 'horn';
+  | 'horn'
+  | 'beak'
+  | 'trunk'
+  | 'spine'
+  | 'wing';
 
 interface PrimBase {
   /** blend radius into everything sculpted before it */
@@ -274,4 +278,60 @@ export function fieldAt(prims: Prim[], p: V3): number {
     d = pr.sub ? smax(d, -v, pr.k) : smin(d, v, pr.k);
   }
   return d;
+}
+
+/** Sample an arbitrary field over a box (used for tack shells). */
+export function sampleFn(fn: (p: V3) => number, min: V3, max: V3, h: number): Grid {
+  const margin = 2 * h;
+  const origin: V3 = [min[0] - margin, min[1] - margin, min[2] - margin];
+  const nx = Math.ceil((max[0] - min[0] + 2 * margin) / h) + 1;
+  const ny = Math.ceil((max[1] - min[1] + 2 * margin) / h) + 1;
+  const nz = Math.ceil((max[2] - min[2] + 2 * margin) / h) + 1;
+  const d = new Float32Array(nx * ny * nz);
+  const p: V3 = [0, 0, 0];
+  let i = 0;
+  for (let z = 0; z < nz; z++) {
+    p[2] = origin[2] + z * h;
+    for (let y = 0; y < ny; y++) {
+      p[1] = origin[1] + y * h;
+      for (let x = 0; x < nx; x++, i++) {
+        p[0] = origin[0] + x * h;
+        const onEdge = x === 0 || y === 0 || z === 0 || x === nx - 1 || y === ny - 1 || z === nz - 1;
+        d[i] = onEdge ? Math.max(h, fn(p)) : fn(p);
+      }
+    }
+  }
+  return { origin, h, nx, ny, nz, d };
+}
+
+/** The sculpt's field, restricted to the shapes that can matter inside a box (fast). */
+export function fieldIn(prims: Prim[], min: V3, max: V3): (p: V3) => number {
+  const sel = prims.filter((pr) => {
+    const b = primBounds(pr);
+    const g = pr.k + 0.001;
+    return b.min[0] - g <= max[0] && b.max[0] + g >= min[0] && b.min[1] - g <= max[1] && b.max[1] + g >= min[1] && b.min[2] - g <= max[2] && b.max[2] + g >= min[2];
+  });
+  return (p: V3) => fieldAt(sel, p);
+}
+
+export function sdBox(p: V3, c: V3, half: V3, r: number): number {
+  const qx = Math.abs(p[0] - c[0]) - half[0] + r;
+  const qy = Math.abs(p[1] - c[1]) - half[1] + r;
+  const qz = Math.abs(p[2] - c[2]) - half[2] + r;
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - r;
+}
+export function sdEll(p: V3, c: V3, r: V3): number {
+  const lx = (p[0] - c[0]) / r[0];
+  const ly = (p[1] - c[1]) / r[1];
+  const lz = (p[2] - c[2]) / r[2];
+  const k0 = Math.sqrt(lx * lx + ly * ly + lz * lz);
+  const k1 = Math.sqrt((lx / r[0]) ** 2 + (ly / r[1]) ** 2 + (lz / r[2]) ** 2);
+  return k1 < 1e-9 ? -Math.min(...r) : (k0 * (k0 - 1)) / k1;
+}
+/** distance to a capsule a→b of radius r */
+export function sdCapsule(p: V3, a: V3, b: V3, r: number): number {
+  const ba = sub(b, a);
+  const pa = sub(p, a);
+  const t = Math.max(0, Math.min(1, dot(pa, ba) / Math.max(1e-12, dot(ba, ba))));
+  return len(sub(pa, scale(ba, t))) - r;
 }

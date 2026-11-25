@@ -1,0 +1,74 @@
+/**
+ * Skin weights and "what is this point part of?", both answered by the sculpt itself.
+ */
+import type { V3 } from './math';
+import type { Owner } from './paint';
+import { Prim, primDist } from './sdf';
+
+export function owner(prims: Prim[], p: V3): Owner {
+  let best = Infinity;
+  let bp = prims[0];
+  let bt = 0;
+  for (const pr of prims) {
+    if (pr.sub) continue;
+    const r = primDist(p, pr);
+    if (r.d < best) {
+      best = r.d;
+      bp = pr;
+      bt = r.t;
+    }
+  }
+  const u = bp.span ? bp.span[0] + (bp.span[1] - bp.span[0]) * bt : 0;
+  return { prim: bp, u };
+}
+
+/**
+ * Skin weights from the sculpt: a vertex listens to every shape it sits close to (within that
+ * shape's blend radius), and each shape knows which bones it follows along its length.
+ */
+export function skinVertex(prims: Prim[], p: V3, h: number): [number, number][] {
+  const ds: number[] = [];
+  const ts: number[] = [];
+  let dmin = Infinity;
+  for (let i = 0; i < prims.length; i++) {
+    const pr = prims[i];
+    if (pr.sub) {
+      ds.push(Infinity);
+      ts.push(0);
+      continue;
+    }
+    const r = primDist(p, pr);
+    ds.push(r.d);
+    ts.push(r.t);
+    if (r.d < dmin) dmin = r.d;
+  }
+  const acc = new Map<number, number>();
+  for (let i = 0; i < prims.length; i++) {
+    const pr = prims[i];
+    const band = pr.k * 0.7 + h;
+    const x = (ds[i] - dmin) / band;
+    if (x >= 1) continue;
+    const w = (1 - x) * (1 - x);
+    for (const [b, bw] of bindingAt(pr, ts[i])) acc.set(b, (acc.get(b) ?? 0) + w * bw);
+  }
+  const list = [...acc.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const sum = list.reduce((a, [, w]) => a + w, 0) || 1;
+  return list.map(([b, w]) => [b, w / sum]);
+}
+
+export function bindingAt(pr: Prim, t: number): [number, number][] {
+  if (pr.kind === 'ell' || !pr.wb) return pr.wa;
+  const blend = (a: [number, number][], b: [number, number][], s: number) => {
+    const m = new Map<number, number>();
+    for (const [i, w] of a) m.set(i, (m.get(i) ?? 0) + w * (1 - s));
+    for (const [i, w] of b) m.set(i, (m.get(i) ?? 0) + w * s);
+    return [...m.entries()];
+  };
+  if (pr.wm) {
+    if (t < 0.25) return blend(pr.wa, pr.wm, t / 0.25);
+    if (t > 0.75) return blend(pr.wm, pr.wb, (t - 0.75) / 0.25);
+    return pr.wm;
+  }
+  return blend(pr.wa, pr.wb, t);
+}
+
