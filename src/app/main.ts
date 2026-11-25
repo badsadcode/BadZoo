@@ -222,15 +222,15 @@ const SECTIONS: { title: string; open?: boolean; ctls: Ctl[] }[] = [
     ctls: [N('scale', 'Scale', 0.25, 3), L('body.length', 'Length'), L('body.chestDepth', 'Chest depth'), L('body.chestWidth', 'Chest width'), L('body.rumpWidth', 'Rump width'),
       N('body.waist', 'Waist', 0.4, 1.25), N('body.belly', 'Belly', 0, 1), N('body.shoulders', 'Shoulders', 0.5, 1.8), N('body.haunch', 'Haunches', 0.5, 1.8), N('body.hump', 'Hump', 0, 1), N('body.humps', 'Humps', 1, 2, 1), N('body.arch', 'Back arch', -0.06, 0.1, 0.005), L('body.spines', 'Spines', (r) => r.body.chestDepth * 0.4), N('body.spineCount', 'Spine count', 4, 40, 1)],
   },
-  { title: 'Legs', ctls: [L('legs.front', 'Front'), L('legs.hind', 'Hind'), L('legs.thickness', 'Thickness'), S('legs.stance', 'Stance', ['digitigrade', 'unguligrade', 'plantigrade', 'sprawling']), S('legs.foot', 'Feet', ['paw', 'hoof', 'cloven']), N('legs.footSize', 'Foot size', 0.5, 2)] },
+  { title: 'Legs', ctls: [L('legs.front', 'Front'), L('legs.hind', 'Hind'), L('legs.thickness', 'Thickness'), S('legs.stance', 'Stance', ['digitigrade', 'unguligrade', 'plantigrade', 'sprawling']), S('legs.foot', 'Feet', ['paw', 'hoof', 'cloven']), N('legs.footSize', 'Foot size', 0.5, 2), N('legs.feathering', 'Feathering', 0, 1)] },
   { title: 'Neck', ctls: [L('neck.length', 'Length'), L('neck.thickness', 'Thickness'), A('neck.angle', 'Angle', -15, 85), S('neck.mane', 'Mane', ['none', 'crest', 'ruff']), N('neck.maneSize', 'Mane size', 0.3, 2)] },
   {
     title: 'Head',
-    ctls: [L('head.size', 'Skull'), S('head.muzzleShape', 'Muzzle shape', ['tapered', 'blunt', 'bulb', 'flat']), L('head.muzzleLength', 'Muzzle length', (r) => r.head.size * 2.4), L('head.muzzleWidth', 'Muzzle width'), L('head.muzzleDepth', 'Muzzle depth'), N('head.muzzleTaper', 'Taper', 0.3, 1.3), N('head.muzzleBridge', 'Nose bridge', -1, 1), N('head.muzzleDrop', 'Muzzle droop', -1, 1),
-      A('head.pitch', 'Head angle', -15, 80), N('head.cheeks', 'Cheeks', 0.5, 1.8), N('head.brow', 'Brow', 0, 2), S('head.nose', 'Nose', ['pad', 'snout', 'broad', 'beak']), N('head.noseSize', 'Nose size', 0.4, 2), L('head.trunk', 'Trunk', (r) => r.head.size * 4), L('head.tusks', 'Tusks', (r) => r.head.size * 2)],
+    ctls: [L('head.size', 'Skull'), L('head.muzzleLength', 'Muzzle length', (r) => r.head.size * 2.4), L('head.muzzleWidth', 'Muzzle width'), L('head.muzzleDepth', 'Muzzle depth'), N('head.muzzleTaper', 'Taper', 0.3, 1.3), N('head.muzzleSquare', 'Tip squareness', 0, 1), N('head.muzzleFlat', 'Tip flatness', 0, 1), N('head.muzzleBulb', 'Tip bulb', 0, 1), N('head.muzzleBridge', 'Nose bridge', -1, 1), N('head.muzzleDrop', 'Muzzle droop', -1, 1), N('head.stop', 'Stop (forehead)', 0, 1), N('head.dome', 'Skull dome', -1, 1), N('head.headWidth', 'Head width', 0.6, 1.6), N('head.flews', 'Flews (lips)', 0, 1),
+      A('head.pitch', 'Head angle', -15, 80), N('head.cheeks', 'Cheeks', 0.5, 1.8), N('head.brow', 'Brow', 0, 2), S('head.nose', 'Nose', ['pad', 'snout', 'broad', 'beak']), N('head.noseSize', 'Nose size', 0.4, 2), L('head.trunk', 'Trunk', (r) => r.head.size * 4), L('head.tusks', 'Tusks', (r) => r.head.size * 2), N('head.tuskCurl', 'Tusk curl', 0, 3)],
   },
   { title: 'Eyes', ctls: [L('eyes.size', 'Size'), A('eyes.angle', 'Facing', 0, 90), C('eyes.color', 'Iris'), S('eyes.pupil', 'Pupil', ['round', 'slit', 'bar']), B('eyes.glow', 'Glow')] },
-  { title: 'Ears', ctls: [L('ears.length', 'Length'), L('ears.width', 'Width'), N('ears.tip', 'Pointy', 0, 1), A('ears.spread', 'Spread', -20, 100), A('ears.tilt', 'Tilt back', -40, 60), N('ears.droop', 'Floppy', 0, 1), N('ears.side', 'On the side', 0, 1)] },
+  { title: 'Ears', ctls: [L('ears.length', 'Length'), L('ears.width', 'Width'), N('ears.tip', 'Pointy', 0, 1), A('ears.spread', 'Spread', -20, 100), A('ears.tilt', 'Tilt back', -40, 60), N('ears.droop', 'Floppy', 0, 1), N('ears.side', 'On the side', 0, 1), N('ears.fold', 'Tip fold', 0, 1)] },
   { title: 'Tail', ctls: [L('tail.length', 'Length'), L('tail.thickness', 'Thickness'), N('tail.brush', 'Fluff', 0.6, 3), A('tail.lift', 'Lift', -90, 90), A('tail.curl', 'Curl', -180, 360), N('tail.tuft', 'Tuft', 0, 2)] },
   { title: 'Horns', ctls: [S('horns.kind', 'Kind', ['none', 'cow', 'ram', 'goat', 'antlers', 'unicorn', 'rhino', 'dragon']), L('horns.length', 'Length'), L('horns.thickness', 'Thickness')] },
   { title: 'Wings', ctls: [S('wings.kind', 'Kind', ['none', 'membrane', 'feathered']), L('wings.span', 'Span', (r) => r.body.length * 1.6), N('wings.chord', 'Depth', 0.3, 1)] },
@@ -239,7 +239,7 @@ const SECTIONS: { title: string; open?: boolean; ctls: Ctl[] }[] = [
     ctls: [C('coat.base', 'Base'), C('coat.belly', 'Belly'), N('coat.countershade', 'Countershade', 0, 1), S('coat.pattern', 'Pattern', ['solid', 'spots', 'rosettes', 'stripes', 'patches', 'saddle', 'points', 'tabby', 'scales', 'split']),
       C('coat.patternColor', 'Pattern col.'), N('coat.patternAmount', 'Amount', 0, 1), N('coat.patternScale', 'Pattern size', 0.3, 3), OC('coat.mane', 'Mane'), OC('coat.tail', 'Tail'), OC('coat.muzzle', 'Muzzle'),
       OC('coat.earTip', 'Ear tips'), OC('coat.tailTip', 'Tail tip'), C('coat.earInner', 'Inner ear'), C('coat.nose', 'Nose'), C('coat.hoof', 'Hooves'), C('coat.horn', 'Horns'), C('coat.beak', 'Beak'), OC('coat.wing', 'Wings'), OC('coat.spine', 'Spines'), OC('coat.eyePatch', 'Eye patches'),
-      N('coat.socks', 'Socks', 0, 1), C('coat.sockColor', 'Sock colour'), { path: 'coat.blaze', label: 'Blaze', kind: 'bool' }, N('coat.wool', 'Wool', 0, 1), N('coat.jitter', 'Facet jitter', 0, 1)],
+      N('coat.socks', 'Socks', 0, 1), C('coat.sockColor', 'Sock colour'), OC('coat.feather', 'Feathering'), { path: 'coat.blaze', label: 'Blaze', kind: 'bool' }, N('coat.wool', 'Wool', 0, 1), N('coat.jitter', 'Facet jitter', 0, 1)],
   },
   {
     title: 'Tack (mounts)',
@@ -358,6 +358,7 @@ function renderBasics() {
   document.querySelectorAll<HTMLButtonElement>('#species .chip').forEach((b) => b.classList.toggle('on', b.dataset.s === state.own.species));
   $<HTMLInputElement>('in-name').value = state.own.name;
   $<HTMLInputElement>('in-seed').value = String(state.own.seed);
+  document.querySelectorAll<HTMLButtonElement>('#in-sex button').forEach((b) => b.classList.toggle('on', b.dataset.sex === (state.own.sex ?? 'male')));
   $<HTMLSelectElement>('in-hybrid').value = state.hybrid;
   $<HTMLInputElement>('in-blend').value = String(state.blend);
   $('out-blend').textContent = `${Math.round(state.blend * 100)}%`;
@@ -375,7 +376,7 @@ function initUI() {
 
 let cat: Category = categoryOf(state.own.species);
 function renderSpecies() {
-  const tabs: [Category, string][] = [['real', '🌍 Real'], ['fantasy', '🐉 Fantasy'], ['mount', '🏇 Mounts']];
+  const tabs: [Category, string][] = [['real', '🌍 Real'], ['breeds', '🐾 Breeds'], ['fantasy', '🐉 Fantasy'], ['mount', '🏇 Mounts']];
   $('cats').innerHTML = tabs.map(([k, l]) => `<button data-c="${k}" class="${k === cat ? 'on' : ''}">${l}</button>`).join('');
   $('cats').querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => {
     cat = b.dataset.c as Category;
@@ -407,6 +408,13 @@ function initControls() {
     $('out-blend').textContent = `${Math.round(state.blend * 100)}%`;
     rebuildSoon();
   };
+  document.querySelectorAll<HTMLButtonElement>('#in-sex button').forEach((b) => {
+    b.onclick = () => {
+      state.own.sex = b.dataset.sex as 'male' | 'female';
+      renderBasics();
+      rebuild();
+    };
+  });
   $<HTMLInputElement>('in-name').oninput = (e) => {
     state.own.name = (e.target as HTMLInputElement).value;
     rebuildSoon();

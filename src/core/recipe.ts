@@ -7,7 +7,6 @@
 export type Stance = 'digitigrade' | 'unguligrade' | 'plantigrade' | 'sprawling';
 export type Foot = 'paw' | 'hoof' | 'cloven';
 export type Nose = 'pad' | 'snout' | 'broad' | 'beak';
-export type MuzzleShape = 'tapered' | 'blunt' | 'bulb' | 'flat';
 export type Mane = 'none' | 'crest' | 'ruff';
 export type Horns = 'none' | 'cow' | 'ram' | 'goat' | 'antlers' | 'unicorn' | 'rhino' | 'dragon';
 export type Wings = 'none' | 'membrane' | 'feathered';
@@ -18,6 +17,8 @@ export interface AnimalRecipe {
   name: string;
   species: string;
   seed: number;
+  /** applied on top of everything else at generation time (presets describe the male) */
+  sex: 'male' | 'female';
   /** global size multiplier */
   scale: number;
   body: {
@@ -56,6 +57,8 @@ export interface AnimalRecipe {
     stance: Stance;
     foot: Foot;
     footSize: number;
+    /** long hair over the hooves / lower legs, 0 … 1 (clydesdale, shire) */
+    feathering: number;
   };
   neck: {
     length: number;
@@ -73,12 +76,24 @@ export interface AnimalRecipe {
     muzzleDepth: number;
     /** tip radius / base radius */
     muzzleTaper: number;
-    /** muzzle form: tapered cone, blunt (squared box end), bulb (soft swollen end), flat (short pushed-in face) */
-    muzzleShape: MuzzleShape;
+    /** 0 = round end … 1 = square-cornered end */
+    muzzleSquare: number;
+    /** 0 = domed end … 1 = cut flat at the front */
+    muzzleFlat: number;
+    /** 0 = no swelling … 1 = soft, swollen end (horse lips, cow, moose) */
+    muzzleBulb: number;
     /** nose bridge profile: -1 dished … 0 straight … +1 Roman nose */
     muzzleBridge: number;
     /** -1 tip tilts up … +1 tip droops down */
     muzzleDrop: number;
+    /** forehead step: 0 = none (bull terrier: one smooth line) … 0.5 = normal … 1 = steep (boxer, chihuahua) */
+    stop: number;
+    /** -1 flat skull (husky) … +1 apple dome (chihuahua) */
+    dome: number;
+    /** skull width multiplier (0.7 narrow collie … 1.5 bully breeds) */
+    headWidth: number;
+    /** hanging upper lips, 0 … 1 (mastiff, boxer, basset) */
+    flews: number;
     /** degrees the face points down from the neck's line of sight */
     pitch: number;
     cheeks: number;
@@ -88,6 +103,8 @@ export interface AnimalRecipe {
     trunk: number;
     /** tusk length (m), 0 = none */
     tusks: number;
+    /** how much tusks curve: 1 = elephant, 2+ = mammoth spiral */
+    tuskCurl: number;
     noseSize: number;
   };
   eyes: {
@@ -113,6 +130,8 @@ export interface AnimalRecipe {
     droop: number;
     /** how much of the ear base sits toward the side of the head (0 top .. 1 side) */
     side: number;
+    /** semi-erect ears: the top part folds forward, 0 … 1 (collie, jack russell) */
+    fold: number;
   };
   tail: {
     length: number;
@@ -184,6 +203,8 @@ export interface AnimalRecipe {
     sockColor: string;
     /** white face stripe */
     blaze: boolean;
+    /** leg feathering colour ('' = sock colour) */
+    feather: string;
     /** wool / fluff lumps, 0..1 */
     wool: number;
     /** per-facet brightness jitter, 0..1 (hand-made low-poly look) */
@@ -223,13 +244,14 @@ export const BASE: AnimalRecipe = {
   name: 'Rex',
   species: 'dog',
   seed: 1,
+  sex: 'male',
   scale: 1,
   body: { length: 0.5, chestDepth: 0.27, chestWidth: 0.115, rumpWidth: 0.1, waist: 0.72, belly: 0, shoulders: 1, haunch: 1, hump: 0, humps: 1, spines: 0, spineCount: 14, arch: 0.01 },
-  legs: { front: 0.36, hind: 0.4, thickness: 0.048, stance: 'digitigrade', foot: 'paw', footSize: 1 },
+  legs: { front: 0.36, hind: 0.4, thickness: 0.048, stance: 'digitigrade', foot: 'paw', footSize: 1, feathering: 0 },
   neck: { length: 0.2, thickness: 0.07, angle: 45, mane: 'none', maneSize: 1 },
-  head: { size: 0.075, muzzleLength: 0.11, muzzleWidth: 0.04, muzzleDepth: 0.04, muzzleTaper: 0.72, muzzleShape: 'tapered', muzzleBridge: 0, muzzleDrop: 0, pitch: 12, cheeks: 1, brow: 1, nose: 'pad', noseSize: 1, trunk: 0, tusks: 0 },
+  head: { size: 0.075, muzzleLength: 0.11, muzzleWidth: 0.04, muzzleDepth: 0.04, muzzleTaper: 0.72, muzzleSquare: 0, muzzleFlat: 0, muzzleBulb: 0, muzzleBridge: 0, muzzleDrop: 0, stop: 0.5, dome: 0, headWidth: 1, flews: 0, pitch: 12, cheeks: 1, brow: 1, nose: 'pad', noseSize: 1, trunk: 0, tusks: 0, tuskCurl: 1 },
   eyes: { size: 0.013, angle: 32, color: '#9a6a2c', pupil: 'round', glow: false },
-  ears: { length: 0.12, width: 0.065, tip: 0.8, spread: 22, tilt: 8, droop: 0, side: 0.35 },
+  ears: { length: 0.12, width: 0.065, tip: 0.8, spread: 22, tilt: 8, droop: 0, side: 0.35, fold: 0 },
   tail: { length: 0.38, thickness: 0.03, brush: 1.45, lift: -55, curl: 25, tuft: 0 },
   horns: { kind: 'none', length: 0.2, thickness: 0.03 },
   wings: { kind: 'none', span: 0.6, chord: 0.55 },
@@ -258,6 +280,7 @@ export const BASE: AnimalRecipe = {
     socks: 0,
     sockColor: '#f1ece2',
     blaze: false,
+    feather: '',
     wool: 0,
     jitter: 0.35,
   },

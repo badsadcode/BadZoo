@@ -5,7 +5,7 @@
  * triceps, gaskins, cheeks, brows — so that the blended surface reads as anatomy rather than as
  * tubes. Axis convention: +Y up, +Z forward (the animal looks down +Z), +X is the animal's left.
  */
-import { add, cross, DEG, dot, len, lerp, lerp3, norm, scale, sub, V3 } from './math';
+import { add, clamp, cross, DEG, dot, len, lerp, lerp3, norm, scale, sub, V3 } from './math';
 import type { AnimalRecipe, Stance } from './recipe';
 import { fieldAt, frame, Prim, Region, Weights } from './sdf';
 
@@ -238,7 +238,8 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   const fwd: V3 = [0, 0, 1];
   const up: V3 = [0, 1, 0];
   const kBody = D * 0.32;
-  const wool = rc.coat.wool * 0.035;
+  // wool depth grows with the animal (a mammoth's coat is deeper than a sheep's)
+  const wool = rc.coat.wool * 0.035 * Math.max(1, Math.sqrt(D / 0.3));
   const woolly = wool > 0 ? { fluff: wool } : {};
   // topline: a slim cone along the spine keeps the back continuous from croup to withers
   const midZ = (hipZ + scapTopZ) / 2;
@@ -317,6 +318,15 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   }
 
   function addFoot(footBone: string, toeBone: string, ankle: V3, toe: V3, tip: V3) {
+    // feathering: a fluffy skirt of long hair from mid-cannon down over the hoof
+    const fe = rc.legs.feathering ?? 0;
+    if (fe > 0.03) {
+      const top = lerp3(ankle, toe, 0.35);
+      const rbF = T * (0.75 + 0.7 * fe);
+      // the skirt rests on the ground at its widest (hair can't go through the floor)
+      const bot: V3 = [tip[0], rbF + T * 0.3 * fe, lerp(toe[2], tip[2], 0.2) - T * 0.15];
+      cone('feather', add(top, [0, 0, -T * 0.08]), bot, T * 0.46, rbF, T * 0.45, W([footBone, 0.6], [toeBone, 0.4]), W([toeBone, 0.7], [footBone, 0.3]), W([toeBone, 1]), { fluff: T * 0.3 * fe, span: [0.8, 0.97] });
+    }
     const dir = norm(sub(tip, toe));
     const flatDir = sprawl ? norm([dir[0], 0, dir[2]]) : norm([0, 0, dir[2] || 1]);
     if (foot === 'paw') {
@@ -372,32 +382,58 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   const head = W(['Head', 1]);
   // throat: from chest to under the jaw
   cone('neck', add(n0, [0, -D * 0.12, L * 0.02]), at(C, 0, -hs * 0.65, -hs * 0.35), neckBase * 0.7, hs * 0.42, kBody * 0.7, W(['Chest', 0.5], ['Neck1', 0.5]), W(['Neck2', 1]), W(['Head', 0.7], ['Neck2', 0.3]), { flat: { axis: [1, 0, 0], f: 0.8 }, ...woolly });
-  ell('head', C, f, uh, [hs * 0.92, hs * 0.86, hs * 1.02], hs * 0.4, head);
+  const hw = Hd.headWidth ?? 1;
+  const dome = Hd.dome ?? 0;
+  ell('head', add(C, scale(uh, hs * 0.08 * dome)), f, uh, [hs * 0.92 * hw, hs * 0.86 * (1 + 0.28 * dome), hs * 1.02 * (1 + 0.06 * dome)], hs * 0.4, head);
   const muzzleBase = at(C, 0, -hs * 0.22, hs * 0.38);
-  const mShape = Hd.muzzleShape ?? 'tapered';
   const muzzleTip = at(C, 0, -hs * 0.3 - Hd.muzzleDepth * 0.15 - (Hd.muzzleDrop ?? 0) * (Hd.muzzleLength * 0.3 + hs * 0.08), hs * 0.62 + Hd.muzzleLength);
   const mR = Math.max(Hd.muzzleWidth, Hd.muzzleDepth);
   const mFlat = Hd.muzzleWidth < Hd.muzzleDepth ? { axis: [1, 0, 0] as V3, f: Hd.muzzleWidth / Hd.muzzleDepth } : { axis: uh, f: Hd.muzzleDepth / Hd.muzzleWidth };
   const beak = Hd.nose === 'beak';
-  const shaped = beak ? 'tapered' : mShape;
-  const tipR = mR * (shaped === 'blunt' ? Math.max(Hd.muzzleTaper, 0.85) : Hd.muzzleTaper);
+  const sq = beak ? 0 : clamp(Hd.muzzleSquare ?? 0);
+  const fl = beak ? 0 : clamp(Hd.muzzleFlat ?? 0);
+  const bulb = beak ? 0 : clamp(Hd.muzzleBulb ?? 0);
+  // squarer muzzles taper less (a box doesn't come to a point)
+  const tipR = mR * lerp(Hd.muzzleTaper, Math.max(Hd.muzzleTaper, 0.88), sq);
   const fx = mFlat.axis === uh ? 1 : mFlat.f; // width factor at the tip
   const fy = mFlat.axis === uh ? mFlat.f : 1; // depth factor at the tip
   const mDir = norm(sub(muzzleTip, muzzleBase));
   const mUp = norm(sub(uh, scale(mDir, dot(uh, mDir))));
   const mLen = len(sub(muzzleTip, muzzleBase));
-  if (shaped === 'flat') {
-    // short, wide, pushed-in face (cats, pugs): one soft pad instead of a cone
-    ell('muzzle', lerp3(muzzleBase, muzzleTip, 0.55), mDir, mUp, [mR * 1.2 * fx + hs * 0.05, mR * 1.05 * fy, Math.max(mLen * 0.6, mR * 0.55)], hs * 0.3, head);
-  } else {
-    cone(beak ? 'beak' : 'muzzle', muzzleBase, muzzleTip, mR * 1.05, tipR, hs * (beak ? 0.15 : 0.35), head, undefined, undefined, { flat: mFlat });
+  // how far the front of the muzzle sits beyond the tip point (a flat cut pulls it back)
+  const frontK = 1 - 0.6 * fl;
+  const cut = fl > 0.02 ? { n: mDir, o: dot(muzzleTip, mDir) + tipR * frontK * Math.max(fx, fy) * (1 + 0.25 * bulb), k: tipR * lerp(0.35, 0.12, fl) } : undefined;
+  cone(beak ? 'beak' : 'muzzle', muzzleBase, muzzleTip, mR * 1.05, tipR, hs * (beak ? 0.15 : 0.35), head, undefined, undefined, { flat: mFlat, ...(cut ? { cut } : {}) });
+  if (sq > 0.03) {
+    // squared-off end: a rounded box grows over the tip as squareness rises
+    ell('muzzle', sub(muzzleTip, scale(mDir, tipR * 0.3)), mDir, mUp, [tipR * lerp(0.6, 0.98, sq) * fx, tipR * lerp(0.6, 0.92, sq) * fy, tipR * lerp(0.5, 0.8, sq)], tipR * lerp(0.5, 0.3, sq), head, { boxy: lerp(0.9, 0.35, sq), ...(cut ? { cut } : {}) });
   }
-  if (shaped === 'blunt') {
-    // squared-off end (horse, bear, hippo): a rounded box capping the muzzle
-    ell('muzzle', sub(muzzleTip, scale(mDir, tipR * 0.25)), mDir, mUp, [tipR * 0.98 * fx, tipR * 0.92 * fy, tipR * 0.75], tipR * 0.35, head, { boxy: 0.42 });
-  } else if (shaped === 'bulb') {
-    // soft, swollen end (horse lips, cow, moose, camel)
-    ell('muzzle', add(muzzleTip, scale(mDir, tipR * 0.05)), mDir, mUp, [tipR * 1.32 * fx, tipR * 1.25 * fy, tipR * 1.05], tipR * 0.5, head);
+  if (bulb > 0.03) {
+    // soft swollen end
+    ell('muzzle', add(muzzleTip, scale(mDir, tipR * 0.05)), mDir, mUp, [tipR * (1 + 0.36 * bulb) * fx, tipR * (1 + 0.3 * bulb) * fy, tipR * (0.85 + 0.25 * bulb)], tipR * 0.5, head, cut ? { cut } : {});
+  }
+  // stop: the step between forehead and muzzle
+  const stop = Hd.stop ?? 0.5;
+  if (!beak && Hd.trunk <= 0) {
+    if (stop < 0.45) {
+      // fill the step: forehead runs straight down the muzzle (bull terrier)
+      const t = (0.45 - stop) / 0.45;
+      const a = at(C, 0, hs * 0.5 * (1 + 0.2 * dome), hs * 0.35);
+      const b = add(lerp3(muzzleBase, muzzleTip, 0.45), scale(mUp, mR * 0.55 * fy));
+      cone('muzzle', a, b, hs * 0.42 * t * hw + h, mR * 0.6 * t * fx + h, hs * 0.3, head);
+    } else if (stop > 0.55) {
+      // steep forehead (boxer, chihuahua): the brow block rises over the muzzle
+      const t = (stop - 0.55) / 0.45;
+      ell('head', at(C, 0, hs * 0.38, hs * 0.62), f, uh, [hs * 0.55 * hw, hs * (0.25 + 0.2 * t), hs * (0.18 + 0.12 * t)], hs * 0.25, head);
+    }
+  }
+  // flews: hanging upper lips at the sides of the muzzle
+  const flews = Hd.flews ?? 0;
+  if (flews > 0.03 && !beak && Hd.trunk <= 0) {
+    for (const sx of [1, -1]) {
+      const c = add(add(lerp3(muzzleBase, muzzleTip, 0.62), scale([1, 0, 0], sx * mR * 0.62 * fx)), scale(mUp, -mR * (0.45 + 0.45 * flews) * fy));
+      ell('jaw', c, mDir, mUp, [mR * 0.42 * fx, mR * (0.3 + 0.45 * flews) * fy, mLen * 0.32 + tipR * 0.35], mR * 0.3, head);
+    }
   }
   // nose bridge: Roman bump or dished dip along the top of the muzzle
   const bridge = Hd.muzzleBridge ?? 0;
@@ -412,8 +448,8 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   const jawB = add(muzzleTip, add(scale(uh, -tipR * 0.75 * (mFlat.axis === uh ? mFlat.f : 1)), scale(f, -tipR * 0.45)));
   cone('jaw', jawA, beak ? lerp3(jawA, jawB, 0.8) : jawB, hs * 0.4 * Hd.cheeks, tipR * 0.55, hs * 0.25, head, undefined, undefined, { flat: { axis: [1, 0, 0], f: 0.8 } });
   for (const sx of [1, -1]) {
-    ell('head', at(C, sx * hs * 0.5, -hs * 0.32, -hs * 0.02), f, uh, [hs * 0.38 * Hd.cheeks, hs * 0.42 * Hd.cheeks, hs * 0.48 * Hd.cheeks], hs * 0.3, head); // cheek
-    ell('brow', at(C, sx * hs * 0.36, hs * 0.32, hs * 0.55), norm(add(f, [sx * 0.3, 0, 0])), uh, [hs * 0.24 * Hd.brow, hs * 0.14 * Hd.brow, hs * 0.22 * Hd.brow], hs * 0.18, head);
+    ell('head', at(C, sx * hs * 0.5 * hw, -hs * 0.32, -hs * 0.02), f, uh, [hs * 0.38 * Hd.cheeks * Math.sqrt(hw), hs * 0.42 * Hd.cheeks, hs * 0.48 * Hd.cheeks], hs * 0.3, head); // cheek
+    ell('brow', at(C, sx * hs * 0.36 * hw, hs * 0.32, hs * 0.55), norm(add(f, [sx * 0.3, 0, 0])), uh, [hs * 0.24 * Hd.brow, hs * 0.14 * Hd.brow, hs * 0.22 * Hd.brow], hs * 0.18, head);
   }
   // nose
   const ns = Hd.noseSize;
@@ -423,15 +459,15 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
   if (beak || Hd.trunk > 0) {
     // the beak hook / trunk tip replaces the nose
   } else if (Hd.nose === 'pad') {
-    const nc = add(muzzleTip, add(scale(f, tipR * 0.72), scale(uh, tipR * 0.25 * tipFlatY)));
+    const nc = add(muzzleTip, add(scale(f, tipR * 0.72 * frontK), scale(uh, tipR * 0.25 * tipFlatY)));
     ell('nose', nc, norm(add(f, scale(uh, 0.5))), uh, [tipR * 0.75 * ns * tipFlatX + h * 0.5, tipR * 0.5 * ns, tipR * 0.45 * ns], tipR * 0.25, head);
     for (const sx of [1, -1]) nostrils.push(add(nc, add([sx * tipR * 0.3 * ns * tipFlatX, 0, 0], scale(f, tipR * 0.4 * ns))));
   } else if (Hd.nose === 'snout') {
-    const nc = add(muzzleTip, scale(f, tipR * 0.92));
+    const nc = add(muzzleTip, scale(f, tipR * 0.92 * frontK));
     ell('nose', nc, f, uh, [tipR * 1.02 * ns * tipFlatX, tipR * 0.9 * ns * tipFlatY, tipR * 0.32], tipR * 0.18, head);
     for (const sx of [1, -1]) nostrils.push(add(nc, add([sx * tipR * 0.35 * ns * tipFlatX, 0, 0], scale(f, tipR * 0.33))));
   } else {
-    const nc = add(muzzleTip, add(scale(f, tipR * 0.45), scale(uh, -tipR * 0.05)));
+    const nc = add(muzzleTip, add(scale(f, tipR * 0.45 * frontK), scale(uh, -tipR * 0.05)));
     ell('nose', nc, f, uh, [tipR * 1.02 * ns * tipFlatX, tipR * 0.85 * ns * tipFlatY, tipR * 0.62], tipR * 0.3, head);
     for (const sx of [1, -1]) nostrils.push(add(nc, add([sx * tipR * 0.5 * ns * tipFlatX, tipR * 0.15, 0], scale(f, tipR * 0.6))));
   }
@@ -499,7 +535,11 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
       const side: V3 = [sx, 0, 0];
       if (Hd.trunk > 0) {
         const st = add(at(muzzleBase, sx * mR * 0.55, -mR * 0.55, hs * 0.1), [0, 0, 0]);
-        hornChain(st, norm(add(add(f, scale(uh, -0.9)), scale(side, 0.12))), 5, Hd.tusks / 5, Hd.tusks * 0.11, Hd.tusks * 0.04, (d) => norm(rotX(d, -17 * DEG)));
+        const curl = Hd.tuskCurl ?? 1;
+        const n = curl > 1.3 ? 8 : 5;
+        // elephant: a gentle upward sweep. mammoth: out, up and back in, a big spiral
+        hornChain(st, norm(add(add(f, scale(uh, -0.9)), scale(side, 0.12 + 0.12 * (curl - 1)))), n, Hd.tusks / n, Hd.tusks * 0.11, Hd.tusks * 0.035, (d, i) =>
+          norm(add(rotX(d, (-17 * curl * 5) / n * DEG), scale(side, curl > 1.3 ? (i < n / 2 ? 0.03 : -0.12) * (curl - 1) : 0))));
       } else {
         const st = add(muzzleTip, add(add(scale(f, -tipR * 1.1), scale(side, tipR * 0.75)), scale(uh, -tipR * 0.45)));
         hornChain(st, norm(add(add(scale(uh, 1), scale(side, 0.45)), scale(f, 0.15))), 4, Hd.tusks / 4, Hd.tusks * 0.16, Hd.tusks * 0.05, (d) => norm(rotAxis(d, side, sx * -18 * DEG)));
@@ -537,14 +577,33 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     const rb = Math.max(E.width * 0.5 * (1 - E.tip) * 0.75, E.width * 0.07);
     const thick = Math.max(E.width * 0.15, minThick);
     const ear = W([`Ear_${s}`, 1]);
-    cone('ear', sub(base, scale(dir, E.width * 0.15)), tip, ra, rb, Math.min(hs * 0.12, ra * 0.4), W(['Head', 0.5], [`Ear_${s}`, 0.5]), ear, ear, {
-      flat: { axis: thickAxis, f: thick / ra },
-      span: [0, 1],
-      axis: thickAxis,
-    });
+    const fold = clamp(E.fold ?? 0);
+    if (fold < 0.04) {
+      cone('ear', sub(base, scale(dir, E.width * 0.15)), tip, ra, rb, Math.min(hs * 0.12, ra * 0.4), W(['Head', 0.5], [`Ear_${s}`, 0.5]), ear, ear, {
+        flat: { axis: thickAxis, f: thick / ra },
+        span: [0, 1],
+        axis: thickAxis,
+      });
+    } else {
+      // semi-erect: the top of the ear tips forward over a crease
+      const k = 0.55;
+      const mid = add(base, scale(dir, E.length * k));
+      const ang = fold * 115 * DEG;
+      const dir2 = norm(add(scale(dir, Math.cos(ang)), scale(thickAxis, Math.sin(ang))));
+      const th2 = perp(norm(sub(scale(thickAxis, Math.cos(ang)), scale(dir, Math.sin(ang)))), dir2);
+      const rm = lerp(ra, rb, k);
+      const tip2 = add(mid, scale(dir2, E.length * (1 - k)));
+      cone('ear', sub(base, scale(dir, E.width * 0.15)), mid, ra, rm, Math.min(hs * 0.12, ra * 0.4), W(['Head', 0.5], [`Ear_${s}`, 0.5]), ear, ear, {
+        flat: { axis: thickAxis, f: thick / ra },
+        span: [0, k],
+        axis: thickAxis,
+      });
+      cone('ear', mid, tip2, rm, rb, rm * 0.3, ear, ear, ear, { flat: { axis: th2, f: Math.min(1, thick / rm) }, span: [k, 1], axis: th2 });
+      earTips[earTips.length - 1] = tip2;
+    }
     world[`Ear_${s}`] = base;
-    // cup the inside of erect ears
-    if (E.droop < 0.5) {
+    // cup the inside of erect ears (only the upright part of folded ones)
+    if (E.droop < 0.5 && (E.fold ?? 0) < 0.04) {
       const off = scale(thickAxis, thick * 0.95);
       prims.push({
         kind: 'cone', region: 'earInner', sub: true,

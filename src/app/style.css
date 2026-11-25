@@ -82,3 +82,5 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 }
 .seg.cats { margin-bottom: 10px; background: var(--panel2); }
 .seg.cats button { flex: 1; }
+.seg.sex { grid-column: 2; }
+.seg.sex button { flex: 1; }

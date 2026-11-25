@@ -7,7 +7,7 @@ import { AnimalRecipe, BASE, mergeRecipe } from './recipe';
 
 type Patch = Parameters<typeof mergeRecipe>[1];
 
-export type Category = 'real' | 'fantasy' | 'mount';
+export type Category = 'real' | 'breeds' | 'fantasy' | 'mount';
 interface SpeciesDef {
   label: string;
   emoji: string;
@@ -54,7 +54,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 0.235, chestDepth: 0.12, chestWidth: 0.055, rumpWidth: 0.055, waist: 0.82, haunch: 1.15 },
       legs: { front: 0.17, hind: 0.19, thickness: 0.019, footSize: 0.95 },
       neck: { length: 0.075, thickness: 0.034, angle: 50 },
-      head: { size: 0.046, muzzleLength: 0.014, muzzleWidth: 0.022, muzzleDepth: 0.019, muzzleTaper: 0.85, pitch: 4, cheeks: 1.25, brow: 0.7, noseSize: 0.5, muzzleShape: 'flat' },
+      head: { size: 0.046, muzzleLength: 0.014, muzzleWidth: 0.022, muzzleDepth: 0.019, muzzleTaper: 0.85, pitch: 4, cheeks: 1.25, brow: 0.7, noseSize: 0.5, muzzleFlat: 0.7, muzzleSquare: 0.3 },
       eyes: { size: 0.0078, angle: 24, color: '#9cba45', pupil: 'slit' },
       ears: { length: 0.045, width: 0.042, tip: 0.75, spread: 26, tilt: 0, side: 0.45 },
       tail: { length: 0.25, thickness: 0.013, brush: 1.1, lift: -10, curl: 85 },
@@ -68,7 +68,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 0.9, chestDepth: 0.48, chestWidth: 0.22, rumpWidth: 0.19, waist: 0.74, shoulders: 1.2 },
       legs: { front: 0.76, hind: 0.8, thickness: 0.09, footSize: 1.05 },
       neck: { length: 0.28, thickness: 0.15, angle: 28, mane: 'ruff', maneSize: 1.1 },
-      head: { size: 0.14, muzzleLength: 0.1, muzzleWidth: 0.08, muzzleDepth: 0.075, muzzleTaper: 0.92, pitch: 8, cheeks: 1.2, brow: 1.1, noseSize: 0.65, muzzleShape: 'blunt' },
+      head: { size: 0.14, muzzleLength: 0.1, muzzleWidth: 0.08, muzzleDepth: 0.075, muzzleTaper: 0.92, pitch: 8, cheeks: 1.2, brow: 1.1, noseSize: 0.65, muzzleSquare: 0.75, muzzleFlat: 0.45 },
       eyes: { size: 0.019, angle: 22, color: '#c8962e' },
       ears: { length: 0.07, width: 0.075, tip: 0.1, spread: 40, side: 0.45 },
       tail: { length: 0.8, thickness: 0.032, brush: 1, lift: -75, curl: 40, tuft: 1.3 },
@@ -82,7 +82,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 1.08, chestDepth: 0.7, chestWidth: 0.28, rumpWidth: 0.27, waist: 0.95, belly: 0.15, shoulders: 1.05, haunch: 1.1, arch: 0.0 },
       legs: { front: 1.02, hind: 1.08, thickness: 0.082, stance: 'unguligrade', foot: 'hoof', footSize: 1.15 },
       neck: { length: 0.72, thickness: 0.15, angle: 52, mane: 'crest', maneSize: 1.2 },
-      head: { size: 0.13, muzzleLength: 0.36, muzzleWidth: 0.075, muzzleDepth: 0.1, muzzleTaper: 0.85, pitch: 48, cheeks: 1.5, brow: 0.7, nose: 'broad', muzzleShape: 'blunt', muzzleBridge: 0.25, muzzleDrop: 0.1 },
+      head: { size: 0.13, muzzleLength: 0.36, muzzleWidth: 0.075, muzzleDepth: 0.1, muzzleTaper: 0.85, pitch: 48, cheeks: 1.5, brow: 0.7, nose: 'broad', muzzleSquare: 0.75, muzzleFlat: 0.45, muzzleBridge: 0.25, muzzleDrop: 0.1 },
       eyes: { size: 0.024, angle: 72, color: '#3b2417', pupil: 'bar' },
       ears: { length: 0.15, width: 0.07, tip: 0.75, spread: 10, tilt: -6, side: 0.12 },
       tail: { length: 0.75, thickness: 0.05, brush: 1.7, lift: -62, curl: -15 },
@@ -97,7 +97,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 1.2, chestDepth: 0.68, chestWidth: 0.3, rumpWidth: 0.31, waist: 1.05, belly: 0.75, haunch: 0.95, arch: -0.02 },
       legs: { front: 0.8, hind: 0.86, thickness: 0.08, stance: 'unguligrade', foot: 'cloven' },
       neck: { length: 0.36, thickness: 0.2, angle: 22 },
-      head: { size: 0.14, muzzleLength: 0.25, muzzleWidth: 0.12, muzzleDepth: 0.1, muzzleTaper: 1.0, pitch: 50, cheeks: 1.2, brow: 1, nose: 'broad', noseSize: 1.1, muzzleShape: 'bulb' },
+      head: { size: 0.14, muzzleLength: 0.25, muzzleWidth: 0.12, muzzleDepth: 0.1, muzzleTaper: 1.0, pitch: 50, cheeks: 1.2, brow: 1, nose: 'broad', noseSize: 1.1, muzzleBulb: 0.8, muzzleFlat: 0.2 },
       eyes: { size: 0.024, angle: 74, color: '#2a1a12', pupil: 'bar' },
       ears: { length: 0.13, width: 0.085, tip: 0.3, spread: 85, tilt: 0, droop: 0.15, side: 0.9 },
       horns: { kind: 'cow', length: 0.18, thickness: 0.032 },
@@ -141,7 +141,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 0.85, chestDepth: 0.52, chestWidth: 0.27, rumpWidth: 0.25, waist: 0.98, belly: 0.3, hump: 0.65, shoulders: 1.3, haunch: 1.25 },
       legs: { front: 0.56, hind: 0.53, thickness: 0.095, stance: 'plantigrade', footSize: 1.0 },
       neck: { length: 0.18, thickness: 0.18, angle: 18 },
-      head: { size: 0.13, muzzleLength: 0.12, muzzleWidth: 0.068, muzzleDepth: 0.068, muzzleTaper: 0.72, pitch: 14, cheeks: 1.35, brow: 0.9, muzzleShape: 'blunt' },
+      head: { size: 0.13, muzzleLength: 0.12, muzzleWidth: 0.068, muzzleDepth: 0.068, muzzleTaper: 0.72, pitch: 14, cheeks: 1.35, brow: 0.9, muzzleSquare: 0.75, muzzleFlat: 0.45 },
       eyes: { size: 0.012, angle: 28, color: '#2a1a12' },
       ears: { length: 0.06, width: 0.065, tip: 0, spread: 38, side: 0.45 },
       tail: { length: 0.08, thickness: 0.04, brush: 1, lift: -30, curl: 0 },
@@ -186,7 +186,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 0.95, chestDepth: 0.48, chestWidth: 0.21, rumpWidth: 0.19, waist: 0.76, shoulders: 1.2 },
       legs: { front: 0.74, hind: 0.79, thickness: 0.088, footSize: 1.05 },
       neck: { length: 0.26, thickness: 0.14, angle: 25 },
-      head: { size: 0.14, muzzleLength: 0.09, muzzleWidth: 0.08, muzzleDepth: 0.07, muzzleTaper: 0.92, pitch: 8, cheeks: 1.35, brow: 1, noseSize: 0.65, muzzleShape: 'blunt' },
+      head: { size: 0.14, muzzleLength: 0.09, muzzleWidth: 0.08, muzzleDepth: 0.07, muzzleTaper: 0.92, pitch: 8, cheeks: 1.35, brow: 1, noseSize: 0.65, muzzleSquare: 0.75, muzzleFlat: 0.45 },
       eyes: { size: 0.019, angle: 22, color: '#d8a030' },
       ears: { length: 0.07, width: 0.075, tip: 0.1, spread: 42, side: 0.5 },
       tail: { length: 0.9, thickness: 0.035, brush: 1, lift: -60, curl: 35 },
@@ -214,7 +214,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 0.95, chestDepth: 0.6, chestWidth: 0.25, rumpWidth: 0.25, waist: 0.98, belly: 0.25 },
       legs: { front: 0.85, hind: 0.9, thickness: 0.075 },
       neck: { length: 0.55, thickness: 0.15, angle: 45, mane: 'crest', maneSize: 1.1 },
-      head: { size: 0.13, muzzleLength: 0.3, pitch: 45, muzzleShape: 'blunt' },
+      head: { size: 0.13, muzzleLength: 0.3, pitch: 45, muzzleSquare: 0.75, muzzleFlat: 0.45 },
       ears: { length: 0.16, width: 0.08 },
       tail: { length: 0.6, brush: 1, tuft: 1 },
       coat: { base: '#f2efe8', belly: '#f2efe8', countershade: 0, pattern: 'stripes', patternColor: '#1b1818', patternAmount: 0.55, patternScale: 0.85, mane: '#1b1818', tail: '#f2efe8', tailTip: '#1b1818', nose: '#1b1818', blaze: false, socks: 0, earInner: '#f2efe8' },
@@ -227,7 +227,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 0.8, chestDepth: 0.5, chestWidth: 0.21, rumpWidth: 0.2, waist: 1.0, belly: 0.35 },
       legs: { front: 0.66, hind: 0.7, thickness: 0.06 },
       neck: { length: 0.45, thickness: 0.13, angle: 38, mane: 'crest', maneSize: 0.7 },
-      head: { size: 0.13, muzzleLength: 0.27, muzzleWidth: 0.075, muzzleDepth: 0.095, pitch: 40, muzzleShape: 'bulb', muzzleBridge: 0.1 },
+      head: { size: 0.13, muzzleLength: 0.27, muzzleWidth: 0.075, muzzleDepth: 0.095, pitch: 40, muzzleBulb: 0.8, muzzleFlat: 0.2, muzzleBridge: 0.1 },
       ears: { length: 0.24, width: 0.09, tip: 0.55, spread: 22, tilt: 8 },
       tail: { length: 0.55, thickness: 0.025, brush: 1, lift: -80, curl: 0, tuft: 1.1 },
       coat: { base: '#8a8178', belly: '#dcd6cc', countershade: 0.35, pattern: 'solid', muzzle: '#e8e2d8', mane: '#3a3430', tail: '', tailTip: '#3a3430', nose: '#3a3430', blaze: false, socks: 0, eyePatch: '', earTip: '#3a3430', earInner: '#dcd6cc' },
@@ -248,6 +248,19 @@ export const SPECIES: Record<string, SpeciesDef> = {
       mesh: { tris: 1700 },
     },
   },
+  mammoth: {
+    label: 'Mammoth', emoji: '🦣', base: 'elephant',
+    patch: {
+      name: 'Manny',
+      body: { length: 1.9, chestDepth: 1.35, chestWidth: 0.66, rumpWidth: 0.54, waist: 1.0, hump: 0.9, shoulders: 1.2, haunch: 0.9, arch: -0.04 },
+      legs: { front: 1.6, hind: 1.3, thickness: 0.26, footSize: 1.1 },
+      neck: { length: 0.12, thickness: 0.5, angle: 18 },
+      head: { size: 0.46, dome: 0.8, stop: 0.6, trunk: 1.8, tusks: 1.75, tuskCurl: 2.1 },
+      ears: { length: 0.3, width: 0.3, tip: 0.1, spread: 90, tilt: 30, droop: 0.5, side: 0.95 },
+      tail: { length: 0.5, thickness: 0.06, tuft: 1.2 },
+      coat: { base: '#6e4428', belly: '#5a361f', countershade: 0.25, wool: 0.9, nose: '#4a3428', horn: '#ece0c4', earInner: '#5a3a28', tailTip: '#3a2416', jitter: 0.6 },
+    },
+  },
   giraffe: {
     label: 'Giraffe', emoji: '🦒',
     patch: {
@@ -255,7 +268,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 1.25, chestDepth: 0.85, chestWidth: 0.28, rumpWidth: 0.24, waist: 0.85, haunch: 0.9 },
       legs: { front: 2.0, hind: 1.75, thickness: 0.085, stance: 'unguligrade', foot: 'cloven' },
       neck: { length: 2.0, thickness: 0.14, angle: 62, mane: 'crest', maneSize: 0.45 },
-      head: { size: 0.15, muzzleLength: 0.32, muzzleWidth: 0.07, muzzleDepth: 0.09, muzzleTaper: 0.8, pitch: 40, cheeks: 1, nose: 'broad', muzzleShape: 'blunt' },
+      head: { size: 0.15, muzzleLength: 0.32, muzzleWidth: 0.07, muzzleDepth: 0.09, muzzleTaper: 0.8, pitch: 40, cheeks: 1, nose: 'broad', muzzleSquare: 0.75, muzzleFlat: 0.45 },
       eyes: { size: 0.03, angle: 70, color: '#2a1a12', pupil: 'bar' },
       ears: { length: 0.17, width: 0.07, tip: 0.6, spread: 75, tilt: 10, side: 0.6 },
       horns: { kind: 'goat', length: 0.13, thickness: 0.045 },
@@ -271,7 +284,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 1.55, chestDepth: 0.9, chestWidth: 0.45, rumpWidth: 0.42, waist: 1.05, belly: 0.4, shoulders: 1.2, hump: 0.25 },
       legs: { front: 0.72, hind: 0.78, thickness: 0.16, stance: 'unguligrade', foot: 'paw', footSize: 1.25 },
       neck: { length: 0.25, thickness: 0.36, angle: 8 },
-      head: { size: 0.3, muzzleLength: 0.36, muzzleWidth: 0.16, muzzleDepth: 0.18, muzzleTaper: 0.85, pitch: 30, cheeks: 1.1, brow: 0.9, nose: 'broad', muzzleShape: 'blunt' },
+      head: { size: 0.3, muzzleLength: 0.36, muzzleWidth: 0.16, muzzleDepth: 0.18, muzzleTaper: 0.85, pitch: 30, cheeks: 1.1, brow: 0.9, nose: 'broad', muzzleSquare: 0.75, muzzleFlat: 0.45 },
       eyes: { size: 0.02, angle: 80, color: '#2a1a12' },
       ears: { length: 0.2, width: 0.11, tip: 0.5, spread: 45, tilt: 5, side: 0.45 },
       horns: { kind: 'rhino', length: 0.5, thickness: 0.09 },
@@ -287,7 +300,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 1.8, chestDepth: 1.0, chestWidth: 0.6, rumpWidth: 0.56, waist: 1.12, belly: 0.35, arch: 0.04 },
       legs: { front: 0.76, hind: 0.76, thickness: 0.2, stance: 'unguligrade', foot: 'paw', footSize: 1.2 },
       neck: { length: 0.1, thickness: 0.44, angle: 8 },
-      head: { size: 0.38, muzzleLength: 0.45, muzzleWidth: 0.34, muzzleDepth: 0.28, muzzleTaper: 1.1, pitch: 5, cheeks: 1.35, brow: 1.4, nose: 'broad', noseSize: 1.2, tusks: 0, muzzleShape: 'blunt' },
+      head: { size: 0.38, muzzleLength: 0.45, muzzleWidth: 0.34, muzzleDepth: 0.28, muzzleTaper: 1.1, pitch: 5, cheeks: 1.35, brow: 1.4, nose: 'broad', noseSize: 1.2, tusks: 0, muzzleSquare: 0.75, muzzleFlat: 0.45 },
       eyes: { size: 0.035, angle: 45, color: '#3a2618' },
       ears: { length: 0.08, width: 0.075, tip: 0.2, spread: 40, side: 0.35 },
       tail: { length: 0.3, thickness: 0.05, brush: 1, lift: -60, curl: 0 },
@@ -302,7 +315,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 1.15, chestDepth: 0.7, chestWidth: 0.28, rumpWidth: 0.25, waist: 0.82, hump: 0.95, humps: 1 },
       legs: { front: 1.25, hind: 1.3, thickness: 0.075, stance: 'unguligrade', foot: 'paw', footSize: 1.25 },
       neck: { length: 0.95, thickness: 0.13, angle: 28 },
-      head: { size: 0.14, muzzleLength: 0.25, muzzleWidth: 0.07, muzzleDepth: 0.09, muzzleTaper: 0.85, pitch: 12, cheeks: 1, brow: 1.2, nose: 'broad', muzzleShape: 'bulb', muzzleDrop: 0.3 },
+      head: { size: 0.14, muzzleLength: 0.25, muzzleWidth: 0.07, muzzleDepth: 0.09, muzzleTaper: 0.85, pitch: 12, cheeks: 1, brow: 1.2, nose: 'broad', muzzleBulb: 0.8, muzzleFlat: 0.2, muzzleDrop: 0.3 },
       eyes: { size: 0.025, angle: 62, color: '#3a2618', pupil: 'bar' },
       ears: { length: 0.08, width: 0.06, tip: 0.3, spread: 55, side: 0.5 },
       tail: { length: 0.5, thickness: 0.03, brush: 1, lift: -80, curl: 0, tuft: 0.6 },
@@ -317,7 +330,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 1.5, chestDepth: 0.95, chestWidth: 0.4, rumpWidth: 0.3, waist: 0.9, hump: 1, shoulders: 1.45, haunch: 0.85 },
       legs: { front: 0.85, hind: 0.85, thickness: 0.11, stance: 'unguligrade', foot: 'cloven' },
       neck: { length: 0.25, thickness: 0.35, angle: 0, mane: 'ruff', maneSize: 0.85 },
-      head: { size: 0.3, muzzleLength: 0.18, muzzleWidth: 0.14, muzzleDepth: 0.13, muzzleTaper: 0.95, pitch: 60, cheeks: 1.1, brow: 1.3, nose: 'broad', muzzleShape: 'blunt' },
+      head: { size: 0.3, muzzleLength: 0.18, muzzleWidth: 0.14, muzzleDepth: 0.13, muzzleTaper: 0.95, pitch: 60, cheeks: 1.1, brow: 1.3, nose: 'broad', muzzleSquare: 0.75, muzzleFlat: 0.45 },
       eyes: { size: 0.022, angle: 70, color: '#2a1a12', pupil: 'bar' },
       ears: { length: 0.1, width: 0.07, spread: 85, side: 0.9 },
       horns: { kind: 'cow', length: 0.2, thickness: 0.05 },
@@ -333,7 +346,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 0.85, chestDepth: 0.48, chestWidth: 0.2, rumpWidth: 0.19, waist: 0.9 },
       legs: { front: 0.85, hind: 0.9, thickness: 0.055, stance: 'unguligrade', foot: 'paw', footSize: 1 },
       neck: { length: 0.72, thickness: 0.1, angle: 76 },
-      head: { size: 0.1, muzzleLength: 0.13, muzzleWidth: 0.05, muzzleDepth: 0.06, muzzleTaper: 0.85, pitch: 15, nose: 'broad', noseSize: 0.8, muzzleShape: 'bulb' },
+      head: { size: 0.1, muzzleLength: 0.13, muzzleWidth: 0.05, muzzleDepth: 0.06, muzzleTaper: 0.85, pitch: 15, nose: 'broad', noseSize: 0.8, muzzleBulb: 0.8, muzzleFlat: 0.2 },
       eyes: { size: 0.02, angle: 60, color: '#2a1a12', pupil: 'bar' },
       ears: { length: 0.16, width: 0.055, tip: 0.6, spread: 8, tilt: -10, side: 0.3 },
       tail: { length: 0.25, thickness: 0.04, brush: 1.2, lift: 10, curl: -30 },
@@ -347,7 +360,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       body: { length: 1.25, chestDepth: 0.85, chestWidth: 0.33, rumpWidth: 0.28, waist: 0.85, hump: 0.45, shoulders: 1.2 },
       legs: { front: 1.25, hind: 1.3, thickness: 0.085, stance: 'unguligrade', foot: 'cloven' },
       neck: { length: 0.45, thickness: 0.2, angle: 22 },
-      head: { size: 0.21, muzzleLength: 0.45, muzzleWidth: 0.12, muzzleDepth: 0.14, muzzleTaper: 1.05, pitch: 50, cheeks: 1.1, nose: 'broad', noseSize: 1.2, muzzleShape: 'bulb', muzzleBridge: 0.5, muzzleDrop: 0.45 },
+      head: { size: 0.21, muzzleLength: 0.45, muzzleWidth: 0.12, muzzleDepth: 0.14, muzzleTaper: 1.05, pitch: 50, cheeks: 1.1, nose: 'broad', noseSize: 1.2, muzzleBulb: 0.8, muzzleFlat: 0.2, muzzleBridge: 0.5, muzzleDrop: 0.45 },
       eyes: { size: 0.025, angle: 70, color: '#2a1a12', pupil: 'bar' },
       ears: { length: 0.24, width: 0.1, tip: 0.5, spread: 75, side: 0.6 },
       horns: { kind: 'antlers', length: 0.85, thickness: 0.05 },
@@ -575,6 +588,262 @@ export const SPECIES: Record<string, SpeciesDef> = {
     label: 'Wolf Rider', emoji: '🐾', category: 'mount', base: 'direwolf',
     patch: { name: 'Fang', tack: { saddle: true, bridle: true, blanket: true, cloth: '#5a2a5a' } },
   },
+
+  // ───────────────────────────────────────────────────── dog breeds ──
+  labrador: {
+    label: 'Labrador', emoji: '🦮', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Buddy',
+      body: { length: 0.5, chestDepth: 0.29, chestWidth: 0.125, rumpWidth: 0.11, waist: 0.82 },
+      legs: { front: 0.34, hind: 0.37, thickness: 0.05 },
+      head: { size: 0.08, muzzleLength: 0.095, muzzleWidth: 0.046, muzzleDepth: 0.046, muzzleTaper: 0.85, muzzleSquare: 0.55, muzzleFlat: 0.4, stop: 0.62, headWidth: 1.1, flews: 0.25 },
+      ears: { length: 0.12, width: 0.085, tip: 0.1, spread: 88, tilt: 0, droop: 1, side: 0.72 },
+      tail: { length: 0.36, thickness: 0.035, brush: 1.05, lift: -40, curl: 15 },
+      coat: { base: '#e3b86c', belly: '#ecd09a', countershade: 0.35, pattern: 'solid', earInner: '#c99a52' },
+    },
+  },
+  golden: {
+    label: 'Golden Retriever', emoji: '🐕', category: 'breeds', base: 'labrador',
+    patch: {
+      name: 'Sunny',
+      head: { muzzleSquare: 0.35, stop: 0.58, flews: 0.15 },
+      ears: { length: 0.11, width: 0.08 },
+      tail: { brush: 1.75, lift: -30, length: 0.4 },
+      coat: { base: '#d39a4a', belly: '#e6bb78', wool: 0.2 },
+    },
+  },
+  beagle: {
+    label: 'Beagle', emoji: '🐶', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Snoopy', scale: 0.62,
+      body: { length: 0.5, chestDepth: 0.3, chestWidth: 0.13, rumpWidth: 0.115, waist: 0.85 },
+      legs: { front: 0.33, hind: 0.36, thickness: 0.052 },
+      head: { size: 0.088, muzzleLength: 0.1, muzzleWidth: 0.045, muzzleDepth: 0.05, muzzleTaper: 0.85, muzzleSquare: 0.45, muzzleFlat: 0.35, stop: 0.68, dome: 0.25, flews: 0.35 },
+      eyes: { size: 0.016, angle: 30, color: '#5a3416' },
+      ears: { length: 0.14, width: 0.09, tip: 0.05, spread: 80, tilt: 0, droop: 1, side: 0.7 },
+      tail: { length: 0.3, thickness: 0.028, brush: 1, lift: 45, curl: 25 },
+      coat: { base: '#b9783c', belly: '#f3ede2', countershade: 0.55, pattern: 'saddle', patternColor: '#26201b', patternAmount: 0.45, muzzle: '#f3ede2', socks: 0.55, sockColor: '#f3ede2', tailTip: '#f3ede2', blaze: true, earInner: '#a3652e' },
+    },
+  },
+  boxer: {
+    label: 'Boxer', emoji: '🥊', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Rocky',
+      body: { length: 0.48, chestDepth: 0.3, chestWidth: 0.13, rumpWidth: 0.1, waist: 0.66, shoulders: 1.2 },
+      legs: { front: 0.38, hind: 0.41, thickness: 0.05 },
+      head: { size: 0.085, muzzleLength: 0.045, muzzleWidth: 0.055, muzzleDepth: 0.055, muzzleTaper: 0.95, muzzleSquare: 0.9, muzzleFlat: 0.9, muzzleDrop: -0.2, stop: 1, dome: 0.2, headWidth: 1.12, flews: 0.8, noseSize: 1.1 },
+      ears: { length: 0.07, width: 0.06, tip: 0.3, spread: 40, tilt: 0, droop: 0.15, side: 0.45, fold: 0.75 },
+      tail: { length: 0.1, thickness: 0.025, lift: 30, curl: 0 },
+      coat: { base: '#c4823f', belly: '#f2ece2', countershade: 0.3, pattern: 'solid', muzzle: '#2a201c', socks: 0.3, sockColor: '#f2ece2', blaze: true, earInner: '#8a5a2e' },
+    },
+  },
+  bullterrier: {
+    label: 'Bull Terrier', emoji: '🥚', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Bullseye', scale: 0.85,
+      body: { length: 0.46, chestDepth: 0.3, chestWidth: 0.14, rumpWidth: 0.11, waist: 0.75, shoulders: 1.3, haunch: 1.15 },
+      legs: { front: 0.33, hind: 0.36, thickness: 0.055 },
+      head: { size: 0.085, muzzleLength: 0.13, muzzleWidth: 0.045, muzzleDepth: 0.06, muzzleTaper: 0.75, muzzleBridge: 0.45, muzzleDrop: 0.35, stop: 0, dome: -0.2, pitch: 18 },
+      eyes: { size: 0.0095, angle: 38, color: '#2a1a12' },
+      ears: { length: 0.075, width: 0.05, tip: 0.85, spread: 15, tilt: 5, side: 0.25 },
+      tail: { length: 0.22, thickness: 0.025, brush: 1, lift: -15, curl: 10 },
+      coat: { base: '#f4f0e8', belly: '#f4f0e8', countershade: 0, pattern: 'solid', nose: '#1d1716', earInner: '#ebb7ad', jitter: 0.2 },
+    },
+  },
+  basset: {
+    label: 'Basset Hound', emoji: '🌭', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Droopy', scale: 0.8,
+      body: { length: 0.6, chestDepth: 0.3, chestWidth: 0.14, rumpWidth: 0.12, waist: 0.9, belly: 0.2 },
+      legs: { front: 0.17, hind: 0.19, thickness: 0.052, footSize: 1.25 },
+      neck: { length: 0.16, thickness: 0.085, angle: 30 },
+      head: { size: 0.085, muzzleLength: 0.13, muzzleWidth: 0.045, muzzleDepth: 0.06, muzzleTaper: 0.9, muzzleSquare: 0.6, muzzleFlat: 0.5, muzzleDrop: 0.25, stop: 0.55, dome: 0.3, flews: 1, pitch: 20 },
+      eyes: { size: 0.013, angle: 32, color: '#4a2a14' },
+      ears: { length: 0.22, width: 0.1, tip: 0, spread: 88, tilt: 0, droop: 1, side: 0.75 },
+      tail: { length: 0.3, thickness: 0.03, lift: 40, curl: 30 },
+      coat: { base: '#b06e34', belly: '#f2ece2', countershade: 0.55, pattern: 'saddle', patternColor: '#2a221c', patternAmount: 0.35, muzzle: '#f2ece2', socks: 0.6, sockColor: '#f2ece2', tailTip: '#f2ece2', blaze: true },
+    },
+  },
+  chihuahua: {
+    label: 'Chihuahua', emoji: '🐾', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Taco', scale: 0.42,
+      body: { length: 0.38, chestDepth: 0.24, chestWidth: 0.11, rumpWidth: 0.09, waist: 0.7 },
+      legs: { front: 0.3, hind: 0.32, thickness: 0.035 },
+      neck: { length: 0.14, thickness: 0.06, angle: 50 },
+      head: { size: 0.1, muzzleLength: 0.035, muzzleWidth: 0.032, muzzleDepth: 0.03, muzzleTaper: 0.7, stop: 1, dome: 1, pitch: 6, noseSize: 0.8 },
+      eyes: { size: 0.022, angle: 30, color: '#3a2214' },
+      ears: { length: 0.14, width: 0.11, tip: 0.65, spread: 48, tilt: 0, side: 0.45 },
+      tail: { length: 0.28, thickness: 0.02, brush: 1.1, lift: 50, curl: 90 },
+      coat: { base: '#d8a66a', belly: '#efd9b6', countershade: 0.45, pattern: 'solid', earInner: '#e9b6a6', nose: '#2a1e1a' },
+    },
+  },
+  husky: {
+    label: 'Husky', emoji: '❄️', category: 'breeds', base: 'wolf',
+    patch: {
+      name: 'Blizzard', scale: 0.92,
+      head: { muzzleLength: 0.105, dome: -0.4, stop: 0.5, muzzleBridge: 0 },
+      eyes: { color: '#7ec4f0' },
+      ears: { length: 0.09, width: 0.07, tip: 0.75, spread: 18, side: 0.25 },
+      tail: { brush: 1.9, lift: 40, curl: 120 },
+      coat: { base: '#f2efe8', belly: '#f6f3ee', countershade: 0.4, pattern: 'saddle', patternColor: '#5a5b60', patternAmount: 0.6, muzzle: '#f6f3ee', tailTip: '', earInner: '#d8d2c8' },
+    },
+  },
+  doberman: {
+    label: 'Doberman', emoji: '🛡️', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Kaiser', scale: 1.08,
+      body: { length: 0.5, chestDepth: 0.28, chestWidth: 0.11, rumpWidth: 0.095, waist: 0.6, shoulders: 1.1 },
+      legs: { front: 0.42, hind: 0.45, thickness: 0.046 },
+      neck: { length: 0.24, thickness: 0.065, angle: 55 },
+      head: { size: 0.075, muzzleLength: 0.13, muzzleWidth: 0.036, muzzleDepth: 0.042, muzzleTaper: 0.7, stop: 0.35, dome: -0.35, headWidth: 0.9, pitch: 14 },
+      eyes: { size: 0.012, angle: 30, color: '#4a2a14' },
+      ears: { length: 0.14, width: 0.05, tip: 1, spread: 8, tilt: 0, side: 0.25 },
+      tail: { length: 0.08, thickness: 0.022, lift: 40, curl: 0 },
+      coat: { base: '#1e1a1a', belly: '#1e1a1a', countershade: 0, pattern: 'points', patternColor: '#a5612c', patternAmount: 0.3, muzzle: '#a5612c', earInner: '#3a2a22' },
+    },
+  },
+  frenchie: {
+    label: 'French Bulldog', emoji: '🦇', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Gaston', scale: 0.55,
+      body: { length: 0.42, chestDepth: 0.3, chestWidth: 0.16, rumpWidth: 0.115, waist: 0.75, shoulders: 1.3 },
+      legs: { front: 0.24, hind: 0.27, thickness: 0.058 },
+      neck: { length: 0.08, thickness: 0.1, angle: 30 },
+      head: { size: 0.11, muzzleLength: 0.018, muzzleWidth: 0.06, muzzleDepth: 0.05, muzzleTaper: 0.95, muzzleSquare: 1, muzzleFlat: 1, stop: 1, dome: 0.35, headWidth: 1.4, flews: 0.55, pitch: 2, cheeks: 1.3 },
+      eyes: { size: 0.02, angle: 26, color: '#3a2214' },
+      ears: { length: 0.1, width: 0.095, tip: 0.1, spread: 30, tilt: 0, side: 0.35 },
+      tail: { length: 0.05, thickness: 0.025, lift: -30 },
+      coat: { base: '#cfa36e', belly: '#e8cfa6', countershade: 0.35, pattern: 'solid', muzzle: '#2a2220', earInner: '#d9a49a' },
+    },
+  },
+  pug: {
+    label: 'Pug', emoji: '🐽', category: 'breeds', base: 'frenchie',
+    patch: {
+      name: 'Frank',
+      head: { size: 0.115, dome: 0.5, headWidth: 1.3, flews: 0.4 },
+      eyes: { size: 0.024, angle: 30 },
+      ears: { length: 0.07, width: 0.07, droop: 0.6, side: 0.6, fold: 0.3 },
+      tail: { length: 0.14, thickness: 0.028, lift: 60, curl: 320 },
+      coat: { base: '#ddb987', belly: '#e9d0a8', muzzle: '#221c1a', earInner: '#221c1a', eyePatch: '' },
+    },
+  },
+  dachshund: {
+    label: 'Dachshund', emoji: '🌭', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Schnitzel', scale: 0.6,
+      body: { length: 0.7, chestDepth: 0.3, chestWidth: 0.12, rumpWidth: 0.1, waist: 0.82 },
+      legs: { front: 0.16, hind: 0.18, thickness: 0.045 },
+      neck: { length: 0.18, thickness: 0.075, angle: 45 },
+      head: { size: 0.08, muzzleLength: 0.14, muzzleWidth: 0.038, muzzleDepth: 0.042, muzzleTaper: 0.72, stop: 0.4, dome: 0, pitch: 14 },
+      ears: { length: 0.13, width: 0.085, tip: 0.05, spread: 85, droop: 1, side: 0.7 },
+      tail: { length: 0.35, thickness: 0.028, lift: 10, curl: 20 },
+      coat: { base: '#9a4a22', belly: '#b3622f', countershade: 0.3, pattern: 'solid', earInner: '#7a3a1a' },
+    },
+  },
+  greatdane: {
+    label: 'Great Dane', emoji: '🦒', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Scooby', scale: 1.4,
+      body: { length: 0.5, chestDepth: 0.28, chestWidth: 0.115, rumpWidth: 0.1, waist: 0.68 },
+      legs: { front: 0.45, hind: 0.48, thickness: 0.048 },
+      neck: { length: 0.26, thickness: 0.07, angle: 55 },
+      head: { size: 0.075, muzzleLength: 0.12, muzzleWidth: 0.045, muzzleDepth: 0.06, muzzleTaper: 0.95, muzzleSquare: 0.85, muzzleFlat: 0.6, stop: 0.85, dome: -0.3, flews: 0.5, pitch: 20 },
+      ears: { length: 0.09, width: 0.06, tip: 0.3, spread: 40, droop: 0.15, side: 0.45, fold: 0.85 },
+      tail: { length: 0.42, thickness: 0.026, lift: -55, curl: 15 },
+      coat: { base: '#f2efe8', belly: '#f2efe8', countershade: 0, pattern: 'patches', patternColor: '#1d1a1a', patternAmount: 0.45, patternScale: 0.6, earInner: '#d9c8c0' },
+    },
+  },
+  corgi: {
+    label: 'Corgi', emoji: '🍞', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Biscuit', scale: 0.62,
+      body: { length: 0.55, chestDepth: 0.3, chestWidth: 0.14, rumpWidth: 0.13, waist: 0.92, haunch: 1.25 },
+      legs: { front: 0.17, hind: 0.19, thickness: 0.05 },
+      head: { size: 0.09, muzzleLength: 0.085, muzzleWidth: 0.04, muzzleDepth: 0.04, muzzleTaper: 0.65, stop: 0.55, dome: 0.1, headWidth: 1.1 },
+      ears: { length: 0.12, width: 0.1, tip: 0.7, spread: 30, tilt: 5, side: 0.35 },
+      tail: { length: 0.06, thickness: 0.03, lift: -20 },
+      coat: { base: '#d77d35', belly: '#f6f1e8', countershade: 0.65, pattern: 'solid', muzzle: '#f6f1e8', blaze: true, socks: 0.5, sockColor: '#f6f1e8', earInner: '#f0d8c4' },
+    },
+  },
+  dalmatian: {
+    label: 'Dalmatian', emoji: '🚒', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Pongo',
+      body: { length: 0.5, chestDepth: 0.28, chestWidth: 0.115, rumpWidth: 0.1, waist: 0.7 },
+      legs: { front: 0.38, hind: 0.41, thickness: 0.046 },
+      head: { size: 0.08, muzzleLength: 0.105, muzzleWidth: 0.042, muzzleDepth: 0.045, muzzleTaper: 0.8, muzzleSquare: 0.3, stop: 0.6, flews: 0.15 },
+      ears: { length: 0.09, width: 0.07, tip: 0.2, spread: 75, droop: 0.95, side: 0.65 },
+      tail: { length: 0.4, thickness: 0.025, lift: -25, curl: 25 },
+      coat: { base: '#f5f2ec', belly: '#f5f2ec', countershade: 0, pattern: 'spots', patternColor: '#1b1818', patternAmount: 0.2, patternScale: 0.5, earInner: '#d8cfc8' },
+    },
+  },
+  poodle: {
+    label: 'Poodle', emoji: '☁️', category: 'breeds', base: 'dog',
+    patch: {
+      name: 'Fifi', scale: 0.8,
+      body: { length: 0.42, chestDepth: 0.26, chestWidth: 0.1, rumpWidth: 0.09, waist: 0.72 },
+      legs: { front: 0.4, hind: 0.43, thickness: 0.04 },
+      neck: { length: 0.24, thickness: 0.06, angle: 62 },
+      head: { size: 0.07, muzzleLength: 0.11, muzzleWidth: 0.03, muzzleDepth: 0.035, muzzleTaper: 0.7, stop: 0.5, dome: 0.2 },
+      ears: { length: 0.13, width: 0.08, tip: 0, spread: 85, droop: 1, side: 0.7 },
+      tail: { length: 0.18, thickness: 0.03, brush: 1.6, lift: 60, curl: 0, tuft: 1.6 },
+      coat: { base: '#f4efe6', belly: '#f4efe6', countershade: 0, pattern: 'solid', wool: 0.9, nose: '#1d1716', earInner: '#efe6da', tailTip: '#f4efe6' },
+    },
+  },
+
+  // ───────────────────────────────────────────────── horse breeds ──
+  clydesdale: {
+    label: 'Clydesdale', emoji: '🐴', category: 'breeds', base: 'horse',
+    patch: {
+      name: 'Angus', scale: 1.12,
+      body: { length: 1.15, chestDepth: 0.78, chestWidth: 0.34, rumpWidth: 0.33, waist: 1.0, shoulders: 1.25, haunch: 1.25 },
+      legs: { front: 1.04, hind: 1.1, thickness: 0.1, footSize: 1.35, feathering: 1 },
+      neck: { length: 0.68, thickness: 0.2, angle: 50, maneSize: 1.1 },
+      head: { size: 0.15, muzzleLength: 0.38, muzzleWidth: 0.09, muzzleDepth: 0.12, muzzleBridge: 0.45, muzzleSquare: 0.7, muzzleBulb: 0.3 },
+      coat: { base: '#6e3b22', belly: '#7a4528', pattern: 'solid', mane: '#2a1a14', tail: '#2a1a14', blaze: true, socks: 0.55, sockColor: '#f3efe8', feather: '#f3efe8' },
+    },
+  },
+  shire: {
+    label: 'Shire', emoji: '🏋️', category: 'breeds', base: 'clydesdale',
+    patch: {
+      name: 'Goliath', scale: 1.2,
+      body: { chestDepth: 0.82, chestWidth: 0.36, rumpWidth: 0.35 },
+      legs: { thickness: 0.105 },
+      head: { muzzleBridge: 0.6 },
+      coat: { base: '#1e1a1a', belly: '#1e1a1a', mane: '#141010', tail: '#141010', socks: 0.6 },
+    },
+  },
+  friesian: {
+    label: 'Friesian', emoji: '🖤', category: 'breeds', base: 'horse',
+    patch: {
+      name: 'Nachtwacht', scale: 1.05,
+      body: { chestDepth: 0.72, shoulders: 1.15, haunch: 1.15 },
+      legs: { thickness: 0.088, feathering: 0.6 },
+      neck: { length: 0.75, thickness: 0.17, angle: 58, mane: 'crest', maneSize: 1.7 },
+      head: { muzzleBridge: 0.05, muzzleSquare: 0.6 },
+      tail: { brush: 2.2, length: 0.9 },
+      coat: { base: '#151212', belly: '#151212', pattern: 'solid', mane: '#0c0a0a', tail: '#0c0a0a', blaze: false, socks: 0, feather: '#0c0a0a', jitter: 0.25 },
+    },
+  },
+  percheron: {
+    label: 'Percheron', emoji: '⚙️', category: 'breeds', base: 'horse',
+    patch: {
+      name: 'Gris', scale: 1.1,
+      body: { length: 1.1, chestDepth: 0.78, chestWidth: 0.35, rumpWidth: 0.35, waist: 1.0, shoulders: 1.3, haunch: 1.3 },
+      legs: { thickness: 0.1, footSize: 1.25, feathering: 0.15 },
+      neck: { length: 0.62, thickness: 0.21, angle: 48 },
+      head: { size: 0.14, muzzleSquare: 0.6, muzzleBridge: 0 },
+      coat: { base: '#9a9a98', belly: '#b9b8b4', countershade: 0.3, pattern: 'spots', patternColor: '#6e6d6b', patternAmount: 0.35, patternScale: 0.6, mane: '#3a3a3a', tail: '#4a4a4a', blaze: false, socks: 0, feather: '#7a7a78' },
+    },
+  },
+  belgian: {
+    label: 'Belgian Draft', emoji: '🍯', category: 'breeds', base: 'percheron',
+    patch: {
+      name: 'Waffles', scale: 1.14,
+      coat: { base: '#b0682e', belly: '#c47a3a', pattern: 'solid', mane: '#efd9a6', tail: '#efd9a6', blaze: true, socks: 0.45, sockColor: '#f3ead8', feather: '#efd9a6' },
+    },
+  },
 };
 
 export function presetRecipe(species: string, seed = 1): AnimalRecipe {
@@ -673,3 +942,56 @@ export function randomRecipe(seed: number): AnimalRecipe {
 }
 
 export const categoryOf = (k: string): Category => SPECIES[k]?.category ?? 'real';
+
+/** a species and everything it's based on, e.g. clydesdale → horse */
+export function lineage(key: string): string[] {
+  const out = [key];
+  let k = key;
+  while (SPECIES[k]?.base) {
+    k = SPECIES[k].base!;
+    out.push(k);
+  }
+  return out;
+}
+
+/** how much smaller females are, by family (presets describe the male) */
+const FEMALE_SIZE: Record<string, number> = {
+  lion: 0.82, tiger: 0.85, elephant: 0.82, mammoth: 0.84, bison: 0.85, moose: 0.88, deer: 0.88, boar: 0.88, gorilla: 0.8,
+  horse: 0.96, dog: 0.94, wolf: 0.92, cat: 0.92, bear: 0.85, cow: 0.94, goat: 0.9, sheep: 0.92, dragon: 0.93,
+};
+
+/**
+ * Sexual dimorphism as a last step before sculpting, so the sliders keep their values when the
+ * toggle flips. Males are the presets as written; females get finer and, per family, lose the
+ * mane, the antlers, or some tusk.
+ */
+export function applySex(rc: AnimalRecipe): AnimalRecipe {
+  if (rc.sex !== 'female') return rc;
+  const r = structuredClone(rc);
+  const fam = lineage(rc.species);
+  const is = (k: string) => fam.includes(k);
+  const size = fam.map((k) => FEMALE_SIZE[k]).find((x) => x !== undefined) ?? 0.93;
+  r.scale *= size;
+  r.neck.thickness *= 0.86;
+  r.body.shoulders *= 0.9;
+  r.body.haunch *= 0.96;
+  r.body.hump *= 0.7;
+  r.legs.thickness *= 0.93;
+  r.head.size *= 0.96;
+  r.head.brow *= 0.85;
+  r.head.cheeks *= 0.92;
+  r.head.flews *= 0.8;
+  r.eyes.size *= 1.04;
+  if (r.neck.mane === 'crest') r.neck.maneSize *= 0.85;
+  if (is('lion') && r.neck.mane === 'ruff') r.neck.mane = 'none';
+  if ((is('deer') || is('moose')) && r.horns.kind === 'antlers') r.horns.kind = 'none';
+  if (r.horns.kind !== 'none' && r.horns.kind !== 'antlers' && r.horns.kind !== 'unicorn') {
+    r.horns.length *= 0.6;
+    r.horns.thickness *= 0.75;
+  }
+  if (is('elephant') || is('mammoth')) {
+    r.head.tusks *= 0.55;
+    r.head.tuskCurl = 1 + (r.head.tuskCurl - 1) * 0.6;
+  } else if (r.head.tusks > 0) r.head.tusks *= 0.4;
+  return r;
+}

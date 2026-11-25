@@ -209,6 +209,7 @@ export function paintFacet(ctx: PaintContext, p: V3, n: V3, o: Owner, soft = 0):
   if (reg === 'hoof') col = hexRgb(C.hoof);
   if (reg === 'horn') col = mix(hexRgb(C.horn), hexRgb(C.hoof), 0.15);
   if (reg === 'paw') col = mix(col, hexRgb(C.nose), st(-n[1], 0.55, 1)); // pads
+  if (reg === 'feather') col = hexRgb(C.feather || C.sockColor);
 
   return col;
 }

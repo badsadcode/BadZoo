@@ -13,6 +13,7 @@ import { hexRgb, jitter, LOCKED_REGIONS, paintFacet, PaintContext, RGB, srgbToLi
 import type { AnimalRecipe } from './recipe';
 import { Region, sampleGrid } from './sdf';
 import { owner, ownerIndex, skinVertex } from './skin';
+import { applySex } from './species';
 import { buildTack } from './tack';
 import { buildWings, Sheet } from './wings';
 import { bakeTexture, Texture } from './texture';
@@ -130,8 +131,9 @@ function extent(a: Anatomy): number {
   return Math.max(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]);
 }
 
-export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {}): Animal {
+export function generateAnimal(recipe: AnimalRecipe, opts: { clips?: boolean } = {}): Animal {
   const t0 = performance.now();
+  const rc = applySex(recipe);
   const stages: Record<string, number> = {};
   let tl = t0;
   const lap = (k: string) => {
@@ -267,7 +269,7 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
     zmax = Math.max(zmax, body.positions[i]);
   }
   return {
-    recipe: rc,
+    recipe,
     anatomy: anat,
     body,
     eyes,

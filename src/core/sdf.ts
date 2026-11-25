@@ -36,7 +36,8 @@ export type Region =
   | 'beak'
   | 'trunk'
   | 'spine'
-  | 'wing';
+  | 'wing'
+  | 'feather';
 
 interface PrimBase {
   /** blend radius into everything sculpted before it */
@@ -57,6 +58,8 @@ interface PrimBase {
   span?: [number, number];
   /** a direction the painter cares about (the inside of an ear faces this way) */
   axis?: V3;
+  /** slice the shape with a plane (keeps dot(p, n) ≤ o), softened by k: flat-fronted muzzles */
+  cut?: { n: V3; o: number; k: number };
 }
 
 export interface Cone extends PrimBase {
@@ -160,8 +163,9 @@ export function noise3(p: V3): number {
 }
 
 /** Wool: rounded lumps (cellular-ish), always pushing outward. */
-function woolLumps(p: V3): number {
-  const f = 14;
+function woolLumps(p: V3, amp: number): number {
+  // lump size follows the fluff depth, so a mammoth's coat isn't made of sheep-sized curls
+  const f = 0.5 / Math.max(0.005, amp);
   const n = noise3(scale(p, f)) * 0.6 + noise3(scale(p, f * 2.1)) * 0.4;
   return 0.5 + 0.5 * n;
 }
@@ -178,7 +182,8 @@ export function primDist(p: V3, pr: Prim): { d: number; t: number } {
       r.d *= pr.flat.f;
     } else r = sdRoundCone(p, pr.a, pr.b, pr.ra, pr.rb);
   } else r = { d: sdEllipsoid(p, pr), t: 0 };
-  if (pr.fluff) r.d -= pr.fluff * woolLumps(p);
+  if (pr.fluff) r.d -= pr.fluff * woolLumps(p, pr.fluff);
+  if (pr.cut) r.d = smax(r.d, dot(p, pr.cut.n) - pr.cut.o, pr.cut.k);
   return r;
 }
 
