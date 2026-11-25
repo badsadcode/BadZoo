@@ -34,9 +34,9 @@ quadruped skeleton and procedural gaits, all from a seed-reproducible recipe.
 | Rig | 33 core bones (+3 per wing, +3 for a trunk), identity rest rotations, `Socket_Saddle` (rider) and `Socket_Head` |
 | Animations | Idle, Walk (lateral sequence), Trot (diagonal), Gallop (rotary, with spine flex), Eat, Fly (winged); lizards wriggle their spines, wings fold when grounded, trunks sway |
 | Export | GLB (Khronos-validator clean), `.badzoo.json` recipe, share links |
-| Topology | Adaptive isotropic remesh: even triangles snapped to the sculpt, denser on the face, on tight curves and in edge loops around joints; sharp tips pinned. Raw decimation still available |
+| Topology | `auto`: at low budgets quadric decimation (keeps the silhouette) + clean-up (valence flips, gentle relaxation, pinned tips); from ~2.5k an adaptive isotropic remesh: even triangles snapped to the sculpt, denser on the face, on tight curves and in edge loops around joints; sharp tips pinned. Raw decimation still available |
 | Texturing | UV unwrap (islands per body part, angle-split, packed, extra texel density on the head) + baked 512–2048² colour atlas: soft countershading, anti-aliased patterns, eye rims, mouth line, nostrils, toe grooves, fur variation, painted irises. Facet-colour mode still available |
-| Budget | LOD presets 800 / 1.5k / 3k / 5k / 8k (default 3k body + 160 for the eyes) |
+| Budget | LOD presets 300 / 600 / 1.2k / 2k / 4k (default 1.2k body + 40 for the eyes; big animals ~1.6–2k). Wings and tack scale with the LOD |
 
 ## How it works (short version)
 

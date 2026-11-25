@@ -55,6 +55,8 @@ export interface RemeshOptions {
   /** relative edge length at a point (1 = average, 0.5 = twice as fine) */
   sizeAt: (x: number, y: number, z: number) => number;
   iterations?: number;
+  /** 'clean': keep the decimated layout (no split/collapse), only flip + relax + project */
+  mode?: 'iso' | 'clean';
 }
 
 export function remesh(input: TriMesh, g: Grid, opts: RemeshOptions): TriMesh {
@@ -337,7 +339,7 @@ export function remesh(input: TriMesh, g: Grid, opts: RemeshOptions): TriMesh {
     }
   };
 
-  const relaxPass = () => {
+  const relaxPass = (amount = 0.6) => {
     const n = P.length / 3;
     const nb: Set<number>[] = Array.from({ length: n }, () => new Set());
     for (let f = 0; f < T.length / 3; f++)
@@ -364,7 +366,7 @@ export function remesh(input: TriMesh, g: Grid, opts: RemeshOptions): TriMesh {
       let dx = cx - P[i * 3], dy = cy - P[i * 3 + 1], dz = cz - P[i * 3 + 2];
       const dn = dx * nx + dy * ny + dz * nz;
       dx -= dn * nx; dy -= dn * ny; dz -= dn * nz;
-      Q[i * 3] += dx * 0.6; Q[i * 3 + 1] += dy * 0.6; Q[i * 3 + 2] += dz * 0.6;
+      Q[i * 3] += dx * amount; Q[i * 3 + 1] += dy * amount; Q[i * 3 + 2] += dz * amount;
     }
     P = Q;
     for (let i = 0; i < n; i++) if (!sharp[i]) project(i);
@@ -372,6 +374,16 @@ export function remesh(input: TriMesh, g: Grid, opts: RemeshOptions): TriMesh {
 
   findSharp();
   for (let i = 0; i < P.length / 3; i++) if (!sharp[i]) project(i);
+  if (opts.mode === 'clean') {
+    // low budgets: the decimator already put vertices where the silhouette needs them; just make
+    // the triangles better shaped (valence flips on flat hinges, gentle relaxation, re-projection)
+    for (let it = 0; it < 3; it++) {
+      flipPass();
+      relaxPass(0.25);
+      findSharp();
+    }
+    return { pos: Float64Array.from(P), tri: Uint32Array.from(T) };
+  }
   for (let it = 0; it < iters; it++) {
     splitPass();
     if (sharp.length < P.length / 3) {

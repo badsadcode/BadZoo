@@ -261,7 +261,8 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     ell('belly', [0, yW - D * (0.62 + 0.2 * B.belly), z], fwd, up, [B.chestWidth * (0.85 + 0.25 * B.belly), D * (0.3 + 0.18 * B.belly), L * (0.3 + 0.1 * B.belly)], kBody, W(['Spine1', 0.5], ['Spine2', 0.5]), woolly);
   }
   // rump: hips, croup and the top of the hamstrings
-  ell('body', [0, (yP + hipY) / 2 - rumpDepth * 0.1, hipZ - L * 0.02], norm([0, -0.15, 1]), up, [B.rumpWidth * 1.02, rumpDepth * 1.35 + D * 0.1, L * 0.22], kBody, W(['Hips', 1]), woolly);
+  // (sloped down toward the tail, and not pushed out behind the hips: no bubble butts)
+  ell('body', [0, (yP + hipY) / 2 - rumpDepth * 0.05, hipZ + L * 0.03], norm([0, -0.32, 1]), up, [B.rumpWidth * 0.98, rumpDepth * 1.15 + D * 0.08, L * 0.2], kBody * 0.85, W(['Hips', 1]), woolly);
   // withers bridge between the shoulder blades
   ell('body', [0, yW - D * 0.12, scapTopZ + L * 0.02], fwd, up, [B.chestWidth * 0.75, D * 0.16, L * 0.2], kBody * 0.8, W(['Chest', 1]), woolly);
   if (B.hump > 0) {
@@ -304,7 +305,8 @@ export function buildAnatomy(rc: AnimalRecipe, h: number): Anatomy {
     const ht = legs.find((l) => l.side === s && !l.front)!.tip;
     const hc = B.haunch;
     // haunch: the big hamstring/quad mass that gives a quadruped its back end
-    ell('body', add(lerp3(hj, kn, 0.42), [0, T * 0.05, -T * 0.55]), sub(kn, hj), side, [T * 1.6 * hc, T * 1.85 * hc, len(sub(kn, hj)) * 0.78], kBody * 0.6, W([n('Thigh'), 0.7], ['Hips', 0.3]), woolly);
+    // (long along the femur, deep front-to-back, but flat sideways: thighs, not cheeks)
+    ell('body', add(lerp3(hj, kn, 0.4), [0, 0, -T * 0.22]), sub(kn, hj), side, [T * 1.45 * hc, T * 1.02 * hc, len(sub(kn, hj)) * 0.7], kBody * 0.5, W([n('Thigh'), 0.7], ['Hips', 0.3]), woolly);
     cone('leg', hj, kn, T * 1.45, T * 0.9, T * 0.7, W(['Hips', 0.5], [n('Thigh'), 0.5]), W([n('Thigh'), 1]), W([n('Thigh'), 0.5], [n('Shin'), 0.5]), { span: [0, 0.3], ...legWool });
     // gaskin (calf) + the point of the hock
     ell('leg', add(lerp3(kn, hk, 0.3), [0, 0, -T * 0.4]), sub(hk, kn), side, [T * 0.8 * hc, T * 0.9 * hc, len(sub(hk, kn)) * 0.4], T * 0.5, W([n('Shin'), 1]), legWool);

@@ -5,7 +5,7 @@
  *  - membrane (dragon / bat): scalloped panels between finger bones, with a little billow
  *  - feathered (griffin / pegasus): layered feather cards (primaries, secondaries, tertials,
  *    coverts), each card two-tone, so the wing reads as feathers from any angle
- * Everything is double-sided and skinned to the wing bones.
+ * Sheets are single faces rendered double-sided (the material says so), skinned to the wing bones.
  */
 import type { Anatomy, Wing } from './anatomy';
 import { add, cross, lerp, lerp3, norm, scale, sub, V3 } from './math';
@@ -56,11 +56,6 @@ class Builder {
     emit(a, wa, n, off);
     emit(b, wb, n, off);
     emit(c, wc, n, off);
-    const nb: V3 = [-n[0], -n[1], -n[2]];
-    const ob: V3 = [-off[0], -off[1], -off[2]];
-    emit(a, wa, nb, ob);
-    emit(c, wc, nb, ob);
-    emit(b, wb, nb, ob);
   }
   /** a triangle split once into four, with an optional push on the new midpoints (billow) */
   tri4(a: V3, b: V3, c: V3, wa: W, wb: W, wc: W, col: RGB, sag: V3 = [0, 0, 0]) {
@@ -75,8 +70,22 @@ class Builder {
     this.tri(ca, bc, c, wca, wbc, wc, col);
     this.tri(ab, bc, ca, wab, wbc, wca, col);
   }
-  /** thin triangular prism (finger bones) */
+  /** finger bone: a thin tapered ribbon lying in the wing (2 triangles) */
   rod(a: V3, b: V3, r: number, w: W, col: RGB) {
+    const d = norm(sub(b, a));
+    let side = cross(d, [0, 1, 0]);
+    if (Math.hypot(...side) < 1e-6) side = cross(d, [1, 0, 0]);
+    side = norm(side);
+    const lift: V3 = [0, r * 0.6, 0];
+    const a0 = add(add(a, scale(side, r)), lift);
+    const a1 = add(add(a, scale(side, -r)), lift);
+    const b0 = add(add(b, scale(side, r * 0.3)), lift);
+    const b1 = add(add(b, scale(side, -r * 0.3)), lift);
+    this.tri(a0, a1, b1, w, w, w, col);
+    this.tri(a0, b1, b0, w, w, w, col);
+  }
+  /** (unused) thin triangular prism */
+  prism(a: V3, b: V3, r: number, w: W, col: RGB) {
     const d = norm(sub(b, a));
     let u = cross(d, [0, 1, 0]);
     if (Math.hypot(...u) < 1e-6) u = cross(d, [1, 0, 0]);
@@ -110,15 +119,16 @@ function membrane(bd: Builder, wing: Wing, S: number, col: RGB, boneCol: RGB, ch
   for (let i = 0; i < F.length - 1; i++) {
     const M = scallop(F[i], F[i + 1], J2, 0.28);
     const wM = blendW([wF, 0.8], [wJ2, 0.2]);
-    bd.tri4(J2, F[i], M, wJ2, wF, wM, col, sag);
-    bd.tri4(J2, M, F[i + 1], wJ2, wM, wF, col, sag);
+    bd.tri(J2, F[i], M, wJ2, wF, wM, col);
+    bd.tri(J2, M, F[i + 1], wJ2, wM, wF, col);
   }
   const M3 = scallop(F[F.length - 1], wing.anchor, J1, 0.3);
   const wM3 = blendW([wJ1, 0.4], [wF, 0.3], [wA, 0.3]);
-  bd.tri4(J1, J2, F[F.length - 1], wJ1, wJ2, wF, col, sag);
-  bd.tri4(J1, F[F.length - 1], M3, wJ1, wF, wM3, col, sag);
-  bd.tri4(J1, M3, wing.anchor, wJ1, wM3, wA, col, sag);
-  bd.tri4(J1, wing.anchor, J0, wJ1, wA, wJ0, col, sag);
+  void sag;
+  bd.tri(J1, J2, F[F.length - 1], wJ1, wJ2, wF, col);
+  bd.tri(J1, F[F.length - 1], M3, wJ1, wF, wM3, col);
+  bd.tri(J1, M3, wing.anchor, wJ1, wM3, wA, col);
+  bd.tri(J1, wing.anchor, J0, wJ1, wA, wJ0, col);
   // finger bones
   for (const f of F) bd.rod(J2, f, S * 0.014, wF, boneCol);
   // a thumb claw at the wrist
@@ -142,19 +152,15 @@ function feathers(bd: Builder, wing: Wing, S: number, base: RGB, tip: RGB, chest
     const pr = add(add(p0, scale(d, l * 0.35)), scale(side, -w * 0.5));
     const pm = add(p0, scale(d, l * 0.7));
     const tipP = add(add(p0, scale(d, l)), scale(nrm, -l * 0.04));
-    const tl = add(add(p0, scale(d, l * 0.78)), scale(side, w * 0.32));
-    const tr = add(add(p0, scale(d, l * 0.78)), scale(side, -w * 0.32));
     bd.tri(p0, pl, pm, wt, wt, wt, colA);
     bd.tri(p0, pm, pr, wt, wt, wt, colA);
-    bd.tri(pl, tl, pm, wt, wt, wt, colA);
-    bd.tri(pr, pm, tr, wt, wt, wt, colA);
-    bd.tri(pm, tl, tipP, wt, wt, wt, colB);
-    bd.tri(pm, tipP, tr, wt, wt, wt, colB);
+    bd.tri(pl, tipP, pm, wt, wt, wt, colB);
+    bd.tri(pm, tipP, pr, wt, wt, wt, colB);
   };
   const handDir = norm(sub(wing.fingers[0], J2));
   const handLen = S * 0.42;
   // primaries: fan off the hand, from swept-back to pointing out along the wing
-  const nP = 7;
+  const nP = 5;
   for (let i = 0; i < nP; i++) {
     const t = i / (nP - 1);
     const b = add(J2, scale(handDir, handLen * t * 0.55));
@@ -168,13 +174,13 @@ function feathers(bd: Builder, wing: Wing, S: number, base: RGB, tip: RGB, chest
       card(lerp3(a, c, t), back, l, S * 0.1, blendW([wa, 1 - t], [wc, t]), lift, colA, colB);
     }
   };
-  row(J1, J2, 6, S * 0.33 * ch, one(fore), blendW([one(fore), 0.4], [one(hand), 0.6]), S * 0.002, base, tip);
-  row(J0, J1, 5, S * 0.27 * ch, blendW([one(chest), 0.5], [one(arm), 0.5]), one(fore), S * 0.002, base, tip);
+  row(J1, J2, 4, S * 0.33 * ch, one(fore), blendW([one(fore), 0.4], [one(hand), 0.6]), S * 0.002, base, tip);
+  row(J0, J1, 3, S * 0.27 * ch, blendW([one(chest), 0.5], [one(arm), 0.5]), one(fore), S * 0.002, base, tip);
   // coverts: a shorter, lighter top layer that hides the roots
   const light = mix(base, [1, 1, 1], 0.12);
-  row(J1, J2, 6, S * 0.17 * ch, one(fore), one(hand), S * 0.012, light, base);
-  row(J0, J1, 5, S * 0.15 * ch, blendW([one(chest), 0.5], [one(arm), 0.5]), one(fore), S * 0.012, light, base);
-  row(J2, add(J2, scale(handDir, handLen * 0.5)), 3, S * 0.2, one(hand), one(hand), S * 0.025, light, base);
+  row(J1, J2, 4, S * 0.17 * ch, one(fore), one(hand), S * 0.012, light, base);
+  row(J0, J1, 2, S * 0.15 * ch, blendW([one(chest), 0.5], [one(arm), 0.5]), one(fore), S * 0.012, light, base);
+  row(J2, add(J2, scale(handDir, handLen * 0.5)), 2, S * 0.2, one(hand), one(hand), S * 0.025, light, base);
 }
 
 export function buildWings(a: Anatomy, rc: AnimalRecipe): Sheet | null {

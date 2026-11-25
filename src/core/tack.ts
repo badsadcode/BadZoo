@@ -208,7 +208,9 @@ export function buildTack(a: Anatomy, rc: AnimalRecipe, h: number): TackOut {
     if (m.tri.length < 12) continue;
     if (signedVolume(m) < 0) flipWinding(m);
     relax(m, 1);
-    const low = decimate(m, { targetTris: pc.tris });
+    // tack follows the animal's LOD
+    const lod = Math.max(0.15, Math.min(2, rc.mesh.tris / 3000));
+    const low = decimate(m, { targetTris: Math.max(12, Math.round(pc.tris * lod)) });
     names.push(pc.name);
     const grp = groups[pc.material];
     const base = hexRgb(pc.color);

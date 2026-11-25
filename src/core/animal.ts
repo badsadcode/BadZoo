@@ -163,8 +163,10 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
   const own = ownerIndex(prims);
   for (let i = 0; i < nD; i++) imp[i] = IMPORTANCE[own(v3(dense.pos, i)).prim.region] ?? 1;
   const target = Math.max(300, rc.mesh.tris);
-  let low = decimate(dense, { targetTris: Math.round(target * 1.6), weight: imp });
-  if (rc.mesh.topology === 'remesh') low = remesh(low, grid, { targetTris: target, sizeAt: sizeField(anat, grid, dense, target, rc, own), iterations: 6 });
+  const topo = rc.mesh.topology === 'auto' || !rc.mesh.topology ? (target < 2500 ? 'clean' : 'remesh') : rc.mesh.topology;
+  let low = decimate(dense, { targetTris: topo === 'remesh' ? Math.round(target * 1.6) : target, weight: imp });
+  if (topo === 'remesh') low = remesh(low, grid, { targetTris: target, sizeAt: sizeField(anat, grid, dense, target, rc, own), iterations: 6 });
+  else if (topo === 'clean') low = remesh(low, grid, { targetTris: target, sizeAt: () => 1, mode: 'clean' });
 
   lap('topology');
   // ── skin + paint
@@ -248,8 +250,9 @@ export function generateAnimal(rc: AnimalRecipe, opts: { clips?: boolean } = {})
   // ── wing sheets join the coat primitive (same material, explicit flat facets)
   const sheet = buildWings(anat, rc);
   let wings: MeshOut | null = null;
-  if (sheet && texture) wings = sheetMesh(sheet);
-  else if (sheet) body = mergeMesh(body, sheet);
+  // wings are their own (double-sided) primitive in both modes
+  if (sheet) wings = sheetMesh(sheet);
+  void mergeMesh;
   const tackOut = rc.tack.saddle || rc.tack.bridle || rc.tack.blanket || rc.tack.barding !== 'none' ? buildTack(anat, rc, h) : { tack: null, metal: null, pieces: [] };
 
   const eyes = eyeMesh(anat, rc, uw?.slots);
@@ -415,7 +418,8 @@ function mergeMesh(m: MeshOut, s: { pos: number[]; nrm: number[]; col: number[];
 
 /** textured eyes: a smooth 80-triangle ball, iris painted in the atlas (front-facing projection) */
 function eyeMeshTextured(a: Anatomy, slots: [number, number, number][]): MeshOut {
-  const ico = icosphere(1);
+  // 20 faces each: mostly buried in the socket, smooth normals + a painted iris do the rest
+  const ico = icosphere(0);
   const P: number[] = [];
   const N: number[] = [];
   const UV: number[] = [];

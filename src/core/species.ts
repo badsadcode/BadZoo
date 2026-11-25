@@ -87,7 +87,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ears: { length: 0.15, width: 0.07, tip: 0.75, spread: 10, tilt: -6, side: 0.12 },
       tail: { length: 0.75, thickness: 0.05, brush: 1.7, lift: -62, curl: -15 },
       coat: { base: '#7a4427', belly: '#8a5333', countershade: 0.15, pattern: 'points', patternColor: '#1f1714', patternAmount: 0.35, mane: '#1f1714', tail: '#1f1714', nose: '#3a2b26', hoof: '#2f2724', earInner: '#3a2b26', blaze: true, socks: 0.35 },
-      mesh: { tris: 3600 },
+      mesh: { tris: 1600 },
     },
   },
   cow: {
@@ -103,7 +103,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       horns: { kind: 'cow', length: 0.18, thickness: 0.032 },
       tail: { length: 0.8, thickness: 0.03, brush: 1, lift: -86, curl: 0, tuft: 1.4 },
       coat: { base: '#f3f0e9', belly: '#f3f0e9', countershade: 0, pattern: 'patches', patternColor: '#1f1b1b', patternAmount: 0.5, nose: '#dea7a3', hoof: '#2b2522', earInner: '#e3b6b0', tailTip: '#1f1b1b' },
-      mesh: { tris: 3600 },
+      mesh: { tris: 1600 },
     },
   },
   pig: {
@@ -245,7 +245,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ears: { length: 0.7, width: 0.75, tip: 0.15, spread: 95, tilt: 45, droop: 0.4, side: 1 },
       tail: { length: 0.95, thickness: 0.05, brush: 1, lift: -85, curl: 0, tuft: 0.9 },
       coat: { base: '#77726d', belly: '#77726d', countershade: 0, pattern: 'solid', nose: '#7a7672', horn: '#efe6cf', earInner: '#9a8a86', jitter: 0.55, tailTip: '#3a3634' },
-      mesh: { tris: 3800 },
+      mesh: { tris: 1700 },
     },
   },
   giraffe: {
@@ -261,7 +261,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       horns: { kind: 'goat', length: 0.13, thickness: 0.045 },
       tail: { length: 0.9, thickness: 0.03, brush: 1, lift: -80, curl: 0, tuft: 1.1 },
       coat: { base: '#a8622c', belly: '#f2e3c2', countershade: 0.2, pattern: 'scales', patternColor: '#f2e3c2', patternAmount: 0.3, patternScale: 0.55, mane: '#7a4520', horn: '#5a3a24', nose: '#3a2a20', hoof: '#3a2a20', tailTip: '#2a1a12', earInner: '#f2e3c2' },
-      mesh: { tris: 3600 },
+      mesh: { tris: 1600 },
     },
   },
   rhino: {
@@ -277,7 +277,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       horns: { kind: 'rhino', length: 0.5, thickness: 0.09 },
       tail: { length: 0.5, thickness: 0.035, brush: 1, lift: -80, curl: 0, tuft: 0.7 },
       coat: { base: '#8b8580', belly: '#8b8580', countershade: 0, pattern: 'solid', nose: '#6a6560', horn: '#7a6e64', hoof: '#5a5550', earInner: '#9a908a', jitter: 0.6 },
-      mesh: { tris: 3600 },
+      mesh: { tris: 1600 },
     },
   },
   hippo: {
@@ -292,7 +292,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ears: { length: 0.08, width: 0.075, tip: 0.2, spread: 40, side: 0.35 },
       tail: { length: 0.3, thickness: 0.05, brush: 1, lift: -60, curl: 0 },
       coat: { base: '#8a6d72', belly: '#d9a39c', countershade: 0.35, pattern: 'solid', nose: '#7a5c60', earInner: '#d9a39c', muzzle: '#b48a88', jitter: 0.4 },
-      mesh: { tris: 3600 },
+      mesh: { tris: 1600 },
     },
   },
   camel: {
@@ -307,7 +307,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ears: { length: 0.08, width: 0.06, tip: 0.3, spread: 55, side: 0.5 },
       tail: { length: 0.5, thickness: 0.03, brush: 1, lift: -80, curl: 0, tuft: 0.6 },
       coat: { base: '#c49a62', belly: '#d8b582', countershade: 0.3, pattern: 'solid', nose: '#6a4a30', earInner: '#d8b582' },
-      mesh: { tris: 3600 },
+      mesh: { tris: 1600 },
     },
   },
   bison: {
@@ -323,7 +323,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       horns: { kind: 'cow', length: 0.2, thickness: 0.05 },
       tail: { length: 0.5, thickness: 0.035, brush: 1, lift: -80, curl: 0, tuft: 1.1 },
       coat: { base: '#5a3f2a', belly: '#4a3322', countershade: 0.2, pattern: 'solid', mane: '#3a2a1e', nose: '#2a1e18', horn: '#2a2420', hoof: '#2a2420', tailTip: '#2a1e18', earInner: '#3a2a1e', jitter: 0.5 },
-      mesh: { tris: 3600 },
+      mesh: { tris: 1600 },
     },
   },
   llama: {
@@ -353,7 +353,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       horns: { kind: 'antlers', length: 0.85, thickness: 0.05 },
       tail: { length: 0.12, thickness: 0.04, lift: -60 },
       coat: { base: '#4a3526', belly: '#3a2a1e', countershade: 0.3, pattern: 'solid', socks: 0.45, sockColor: '#b8a58a', horn: '#c8b088', nose: '#2a1e18', earInner: '#3a2a1e', jitter: 0.5 },
-      mesh: { tris: 3600 },
+      mesh: { tris: 1600 },
     },
   },
   boar: {
@@ -393,7 +393,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ears: { length: 0.03, width: 0.03, tip: 0.5, spread: 70, side: 0.6 },
       tail: { length: 1.7, thickness: 0.2, brush: 1, lift: -4, curl: 0 },
       coat: { base: '#4f5a32', belly: '#c9c08a', countershade: 0.45, pattern: 'scales', patternColor: '#2e351c', patternAmount: 0.55, patternScale: 0.8, nose: '#3a4224', spine: '#3a4224', earInner: '#3a4224', jitter: 0.5 },
-      mesh: { tris: 3600 },
+      mesh: { tris: 1600 },
     },
   },
   lizard: {
@@ -425,7 +425,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       wings: { kind: 'membrane', span: 3.2, chord: 0.62 },
       tail: { length: 3.0, thickness: 0.3, brush: 1, lift: -12, curl: 25 },
       coat: { base: '#7a1f24', belly: '#d9a45a', countershade: 0.55, pattern: 'scales', patternColor: '#4a1015', patternAmount: 0.5, nose: '#3a1215', spine: '#2a1a1a', horn: '#d8c9a8', wing: '#5a1a2a', earInner: '#d9a45a', jitter: 0.5 },
-      mesh: { tris: 4500 },
+      mesh: { tris: 2000 },
     },
   },
   drake: {
@@ -441,7 +441,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       wings: { kind: 'none' },
       tail: { length: 1.9, thickness: 0.26 },
       coat: { base: '#3e6a3a', belly: '#c9c48a', patternColor: '#24401f', spine: '#c9a030', horn: '#c9c0a0', wing: '' },
-      mesh: { tris: 4000 },
+      mesh: { tris: 1800 },
     },
   },
   griffin: {
@@ -457,7 +457,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       wings: { kind: 'feathered', span: 2.0, chord: 0.55 },
       tail: { length: 0.8, thickness: 0.03, brush: 1, lift: -60, curl: 30, tuft: 1.2 },
       coat: { base: '#c39a5e', belly: '#e8d2a6', countershade: 0.35, pattern: 'split', patternColor: '#f2ede4', patternAmount: 0.55, wing: '#6b4a2e', beak: '#e8b830', mane: '#f2ede4', socks: 0.4, sockColor: '#e0b040', tailTip: '#5a3a20', earInner: '#f2ede4', earTip: '#3a2a1a' },
-      mesh: { tris: 3800 },
+      mesh: { tris: 1700 },
     },
   },
   pegasus: {

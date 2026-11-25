@@ -248,9 +248,9 @@ const SECTIONS: { title: string; open?: boolean; ctls: Ctl[] }[] = [
   {
     title: 'Mesh & texture',
     ctls: [
-      { path: 'mesh.tris', label: 'LOD', kind: 'nselect', options: ['800', '1500', '3000', '5000', '8000'] },
-      N('mesh.tris', 'Triangles', 400, 12000, 100),
-      S('mesh.topology', 'Topology', ['remesh', 'decimate']),
+      { path: 'mesh.tris', label: 'LOD', kind: 'nselect', options: ['300', '600', '1200', '2000', '4000'] },
+      N('mesh.tris', 'Triangles', 200, 8000, 50),
+      S('mesh.topology', 'Topology', ['auto', 'remesh', 'decimate']),
       S('mesh.shading', 'Shading', ['flat', 'smooth']),
       { path: 'mesh.texture', label: 'Texture', kind: 'nselect', options: ['0', '512', '1024', '2048'] },
       N('mesh.resolution', 'Sculpt res.', 80, 260, 10),

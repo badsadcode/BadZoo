@@ -186,8 +186,11 @@ export interface AnimalRecipe {
     /** decimation target for the body */
     tris: number;
     shading: 'flat' | 'smooth';
-    /** 'remesh' = even, joint-aware triangles; 'decimate' = raw quadric decimation */
-    topology: 'remesh' | 'decimate';
+    /**
+     * 'auto' = decimate + clean-up at low budgets (keeps the silhouette), even remesh above ~2.5k;
+     * 'remesh' = always even, joint-aware triangles; 'decimate' = raw quadric decimation
+     */
+    topology: 'auto' | 'remesh' | 'decimate';
     /** baked colour texture size (0 = per-facet vertex colours instead) */
     texture: number;
     /** sculpt sampling resolution (cells along the longest axis) */
@@ -251,5 +254,5 @@ export const BASE: AnimalRecipe = {
     wool: 0,
     jitter: 0.35,
   },
-  mesh: { tris: 3000, shading: 'flat', topology: 'remesh', texture: 1024, resolution: 150 },
+  mesh: { tris: 1200, shading: 'flat', topology: 'auto', texture: 1024, resolution: 150 },
 };

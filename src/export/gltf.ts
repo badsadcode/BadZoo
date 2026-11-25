@@ -133,7 +133,7 @@ export function buildGltf(an: Animal, opts: GltfOptions = {}): { json: any; bin:
     json.materials[0].pbrMetallicRoughness.baseColorTexture = { index: 0 };
     json.materials[1].pbrMetallicRoughness.baseColorTexture = { index: 0 };
   }
-  json.materials.push({ name: 'Wings', pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 0.85 } });
+  json.materials.push({ name: 'Wings', doubleSided: true, pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 0.85 } });
   const prim = (m: MeshOut, material: number) => {
     const n = m.positions.length / 3;
     const attributes: Record<string, number> = {
